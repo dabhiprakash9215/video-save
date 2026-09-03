@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VidsSave - MP3 MP4 Downloader & Cutter</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{font-family:Inter,Arial,sans-serif}
+.gradient{background:linear-gradient(90deg,#7c3aed,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.card{box-shadow:0 20px 60px rgba(0,0,0,.08)}
+</style>
+</head>
+<body class="bg-white text-gray-900">
+<header class="border-b bg-white sticky top-0 z-10">
+<div class="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
+<a href="#" class="text-2xl font-extrabold">Vids<span class="gradient">Save</span></a>
+<nav class="hidden md:flex gap-7 text-sm font-semibold">
+<a href="#download">Downloader</a><a href="#cutter">Cutter</a><a href="#how">How to Use</a>
+</nav>
+<a href="#download" class="bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm">Get Started</a>
+</div></header>
+
+<section class="bg-gradient-to-b from-purple-50 to-white">
+<div class="max-w-5xl mx-auto px-5 py-16 text-center">
+<div class="inline-flex bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm mb-5">⚡ Fast & Easy Media Tool</div>
+<h1 class="text-4xl md:text-6xl font-black">Download & Cut <span class="gradient">MP3 / MP4</span></h1>
+<p class="mt-5 text-gray-600 text-lg max-w-2xl mx-auto">YouTube downloader with MP3/MP4 conversion and a simple local media cutter.</p>
+
+<div id="download" class="card bg-white rounded-2xl p-4 mt-9 max-w-4xl mx-auto border text-left">
+<h2 class="text-xl font-bold mb-4">YouTube Downloader</h2>
+<form id="downloadForm" class="flex flex-col md:flex-row gap-3">
+<input id="url" type="url" required placeholder="Paste YouTube URL here..." class="flex-1 border rounded-xl px-5 py-4 outline-none focus:ring-2 focus:ring-purple-500">
+<select id="format" class="border rounded-xl px-4 py-4"><option value="mp4">MP4 Video</option><option value="mp3">MP3 Audio</option></select>
+<button id="downloadBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-7 py-4 rounded-xl">Download</button>
+</form>
+<div id="info" class="hidden mt-4 border rounded-xl p-4"></div>
+<div id="downloadStatus" class="hidden mt-4 rounded-xl p-4"></div>
+<div id="downloadResult" class="hidden mt-4 bg-gray-50 rounded-xl p-5">
+<div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+<div><b id="downloadTitle">File ready</b><p id="downloadType" class="text-sm text-gray-500"></p></div>
+<a id="downloadLink" class="bg-green-600 text-white px-5 py-3 rounded-lg" download>Download File</a>
+</div></div>
+</div>
+</div>
+</section>
+
+<section id="cutter" class="py-16 bg-gray-50">
+<div class="max-w-4xl mx-auto px-5">
+<div class="text-center"><h2 class="text-3xl font-bold">MP3 / MP4 Cutter</h2><p class="text-gray-500 mt-2">Upload a media file and cut the exact part you need.</p></div>
+<div class="bg-white border rounded-2xl p-6 mt-8">
+<form id="cutForm">
+<input id="media" name="media" type="file" accept="audio/*,video/*" required class="w-full border rounded-xl p-4">
+<div class="grid md:grid-cols-2 gap-4 mt-4">
+<div><label class="text-sm font-semibold">Start (seconds or HH:MM:SS)</label><input name="start" value="0" class="mt-2 w-full border rounded-xl px-4 py-3"></div>
+<div><label class="text-sm font-semibold">End (seconds or HH:MM:SS)</label><input name="end" placeholder="60" required class="mt-2 w-full border rounded-xl px-4 py-3"></div>
+</div>
+<button id="cutBtn" class="mt-5 bg-gray-900 text-white px-6 py-3 rounded-xl font-bold">Cut Media</button>
+</form>
+<div id="cutStatus" class="hidden mt-4 rounded-xl p-4"></div>
+<div id="cutResult" class="hidden mt-4 bg-gray-50 rounded-xl p-5">
+<b>Cut file is ready ✅</b><br><a id="cutLink" class="inline-block mt-3 bg-green-600 text-white px-5 py-3 rounded-lg" download>Download Cut File</a>
+</div>
+</div>
+</div>
+</section>
+
+<section id="how" class="py-16">
+<div class="max-w-6xl mx-auto px-5">
+<h2 class="text-3xl font-bold text-center">How to Use</h2>
+<div class="grid md:grid-cols-3 gap-7 mt-9">
+<div class="border rounded-xl p-7"><b class="text-3xl">1️⃣</b><h3 class="font-bold text-xl mt-4">Paste URL</h3><p class="text-gray-500 mt-2">Paste a public YouTube URL.</p></div>
+<div class="border rounded-xl p-7"><b class="text-3xl">2️⃣</b><h3 class="font-bold text-xl mt-4">Choose MP3/MP4</h3><p class="text-gray-500 mt-2">Select audio or video format.</p></div>
+<div class="border rounded-xl p-7"><b class="text-3xl">3️⃣</b><h3 class="font-bold text-xl mt-4">Download</h3><p class="text-gray-500 mt-2">Wait for processing and download your file.</p></div>
+</div>
+</div></section>
+
+<footer class="bg-gray-900 text-white"><div class="max-w-7xl mx-auto px-5 py-10 text-center"><b class="text-2xl">VidsSave</b><p class="text-gray-400 mt-3">Downloader & media cutter.</p><p class="text-gray-500 text-sm mt-5">Use only content you own or have permission to download.</p></div></footer>
+
+<script>
+const $=id=>document.getElementById(id);
+function msg(el,text,error=false){el.classList.remove("hidden","bg-red-50","text-red-700","bg-purple-50","text-purple-700","bg-green-50","text-green-700");el.classList.add(error?"bg-red-50":"bg-purple-50",error?"text-red-700":"text-purple-700");el.textContent=text}
+
+$("downloadForm").addEventListener("submit",async e=>{
+e.preventDefault(); $("downloadResult").classList.add("hidden");
+const btn=$("downloadBtn"), status=$("downloadStatus"), url=$("url").value.trim(), format=$("format").value;
+btn.disabled=true;btn.textContent="Processing...";msg(status,"Getting video information...");
+try{
+const infoRes=await fetch("/api/info",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});
+const info=await infoRes.json(); if(!infoRes.ok) throw new Error(info.error);
+$("info").classList.remove("hidden");$("info").innerHTML="<b>"+escapeHtml(info.title)+"</b>";
+msg(status,"Downloading and converting. Please wait...");
+const r=await fetch("/api/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,format})});
+const data=await r.json(); if(!r.ok) throw new Error(data.error);
+$("downloadTitle").textContent=info.title||"File ready";$("downloadType").textContent="Format: "+format.toUpperCase();
+$("downloadLink").href=data.downloadUrl;$("downloadLink").download=data.filename;$("downloadResult").classList.remove("hidden");
+msg(status,"Completed successfully.");
+}catch(err){msg(status,err.message,true)}finally{btn.disabled=false;btn.textContent="Download"}
+});
+
+$("cutForm").addEventListener("submit",async e=>{
+e.preventDefault(); $("cutResult").classList.add("hidden");
+const btn=$("cutBtn"),status=$("cutStatus");btn.disabled=true;btn.textContent="Cutting...";
+try{
+const fd=new FormData(e.target);msg(status,"Uploading and cutting media...");
+const r=await fetch("/api/cut",{method:"POST",body:fd});const data=await r.json();if(!r.ok)throw new Error(data.error);
+$("cutLink").href=data.downloadUrl;$("cutLink").download=data.filename;$("cutResult").classList.remove("hidden");msg(status,"Cut completed successfully.");
+}catch(err){msg(status,err.message,true)}finally{btn.disabled=false;btn.textContent="Cut Media"}
+});
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+</script>
+</body></html>

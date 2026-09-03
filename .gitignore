@@ -1,0 +1,9 @@
+node_modules/
+downloads/*
+!downloads/.gitkeep
+uploads/*
+!uploads/.gitkeep
+bin/yt-dlp.exe
+bin/yt-dlp
+cookies.txt
+.env
