@@ -12,22 +12,11 @@ const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 
 function resolveWritableDir(sub) {
-  try {
-    const localDir = path.join(ROOT, sub);
-    if (!fs.existsSync(localDir)) {
-      fs.mkdirSync(localDir, { recursive: true });
-    }
-    const testFile = path.join(localDir, ".write_test");
-    fs.writeFileSync(testFile, "1");
-    fs.unlinkSync(testFile);
-    return localDir;
-  } catch {
-    const tmpDir = path.join(os.tmpdir(), "vidssave", sub);
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
-    }
-    return tmpDir;
+  const tmpDir = path.join(os.tmpdir(), "vidssave", sub);
+  if (!fs.existsSync(tmpDir)) {
+    fs.mkdirSync(tmpDir, { recursive: true });
   }
+  return tmpDir;
 }
 
 const DOWNLOADS = resolveWritableDir("downloads");
@@ -153,7 +142,7 @@ function getCommonYtDlpArgs(cookieInfo = null) {
     "--user-agent",
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "--extractor-args",
-    "youtube:player_client=tv_embedded,web_creator,mweb,android"
+    "youtube:player_client=android_vr,web_creator,mweb,web,ios,android"
   ];
 
   if (ffmpegPath) {
@@ -333,8 +322,8 @@ app.post("/api/download", async (req, res) => {
 
     // Multi-client fallback strategy for downloading
     const clientAttempts = [
-      "tv_embedded,web_creator,mweb",
-      "android_vr,tv_embedded",
+      "android_vr,web_creator,mweb,web",
+      "android,ios,web",
       "web,mweb",
       ""
     ];
@@ -343,7 +332,7 @@ app.post("/api/download", async (req, res) => {
     let lastError = null;
 
     for (const clientGroup of clientAttempts) {
-      let args = [
+      let baseArgs = [
         "--no-playlist",
         "--no-warnings",
         "--restrict-filenames",
@@ -354,77 +343,109 @@ app.post("/api/download", async (req, res) => {
       ];
 
       if (clientGroup) {
-        args.push("--extractor-args", `youtube:player_client=${clientGroup}`);
+        baseArgs.push("--extractor-args", `youtube:player_client=${clientGroup}`);
       }
 
       if (ffmpegPath) {
-        args.push("--ffmpeg-location", ffmpegPath);
+        baseArgs.push("--ffmpeg-location", ffmpegPath);
       }
 
       if (cookieInfo && cookieInfo.path && fs.existsSync(cookieInfo.path)) {
-        args.push("--cookies", cookieInfo.path);
+        baseArgs.push("--cookies", cookieInfo.path);
       }
 
       const proxy = process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
       if (proxy) {
-        args.push("--proxy", proxy);
+        baseArgs.push("--proxy", proxy);
       }
+
+      let formatArgsList = [];
 
       if (format === "mp3") {
         if (ffmpegPath) {
-          args.push(
-            "-f", "ba/140/ba[ext=m4a]/bestaudio/18/b",
+          formatArgsList.push([
+            "-f", "ba/b/bestaudio/best",
             "-x",
             "--audio-format", "mp3",
             "--audio-quality", quality === "320" ? "320K" : "192K",
             "-o", titleTemplate,
             url
-          );
-        } else {
-          args.push(
-            "-f", "ba/140/ba[ext=m4a]/bestaudio/18/b",
+          ]);
+          // Fallback if strict audio selector fails
+          formatArgsList.push([
+            "-f", "best/bestaudio/b/ba",
+            "-x",
+            "--audio-format", "mp3",
             "-o", titleTemplate,
             url
-          );
+          ]);
+        } else {
+          formatArgsList.push([
+            "-f", "ba[ext=m4a]/140/ba/b/bestaudio/best",
+            "-o", titleTemplate,
+            url
+          ]);
         }
       } else {
         // MP4 format
         if (quality === "1080" && ffmpegPath) {
-          args.push(
-            "-f", "bv*[ext=mp4][height<=1080]+ba[ext=m4a]/b[ext=mp4][height<=1080]/best[ext=mp4]/best",
+          formatArgsList.push([
+            "-f", "bv*[height<=1080]+ba/b[height<=1080]/bv*+ba/b/best",
             "--merge-output-format", "mp4",
             "-o", titleTemplate,
             url
-          );
+          ]);
         } else if (quality === "720" && ffmpegPath) {
-          args.push(
-            "-f", "bv*[ext=mp4][height<=720]+ba[ext=m4a]/b[ext=mp4][height<=720]/18/best[ext=mp4]/best",
+          formatArgsList.push([
+            "-f", "bv*[height<=720]+ba/b[height<=720]/bv*+ba/b/best",
             "--merge-output-format", "mp4",
             "-o", titleTemplate,
             url
-          );
-        } else {
-          // Standard / 360p-720p direct single stream
-          args.push(
-            "-f", "18/b[ext=mp4]/best[ext=mp4]/best",
+          ]);
+        } else if (ffmpegPath) {
+          // Standard / Best with FFmpeg
+          formatArgsList.push([
+            "-f", "bv*+ba/b/best",
+            "--merge-output-format", "mp4",
             "-o", titleTemplate,
             url
-          );
+          ]);
+        } else {
+          // No FFmpeg available
+          formatArgsList.push([
+            "-f", "b[ext=mp4]/18/22/b/best/bv*+ba",
+            "-o", titleTemplate,
+            url
+          ]);
+        }
+
+        // Universal MP4 fallback
+        if (ffmpegPath) {
+          formatArgsList.push([
+            "-f", "bestvideo*+bestaudio/best",
+            "--merge-output-format", "mp4",
+            "-o", titleTemplate,
+            url
+          ]);
         }
       }
 
-      try {
-        await run(ytDlp, args);
-        downloadSuccess = true;
-        break;
-      } catch (err) {
-        lastError = err;
-        // If error was NOT bot check, break or continue
-        const errMsg = String(err.message || "");
-        if (!/bot|403|Forbidden|Sign in/i.test(errMsg)) {
-          // Try next client
+      for (const fmtArgs of formatArgsList) {
+        try {
+          const runArgs = [...baseArgs, ...fmtArgs];
+          await run(ytDlp, runArgs);
+          downloadSuccess = true;
+          break;
+        } catch (err) {
+          lastError = err;
+          const errMsg = String(err.message || "");
+          if (/bot|403|Forbidden|Sign in/i.test(errMsg)) {
+            break; // Try next client group
+          }
         }
       }
+
+      if (downloadSuccess) break;
     }
 
     if (!downloadSuccess) {
@@ -540,6 +561,9 @@ function friendlyError(e) {
   const m = String(e.message || e);
   if (/Sign in to confirm you’re not a bot|Sign in to confirm you're not a bot|bot verification|HTTP Error 403: Forbidden|403.*Forbidden/i.test(m)) {
     return "YouTube requested bot verification for this server IP. To fix: Click '⚙️ Cookie Settings' in the header to paste YouTube cookies, or add YOUTUBE_COOKIES in your Vercel Environment Variables.";
+  }
+  if (/Requested format is not available/i.test(m)) {
+    return "Selected video format is not directly available for this video. Please retry or choose a different format.";
   }
   if (/ffmpeg/i.test(m) && !/warning/i.test(m)) return "FFmpeg processing error. Ensure FFmpeg is available.";
   if (/yt-dlp/i.test(m) && /exited with code/i.test(m)) return "Download stream error. Please check the video URL and retry.";
