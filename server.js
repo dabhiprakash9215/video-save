@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const crypto = require("crypto");
 const { spawn, execSync } = require("child_process");
 const { ensureYtDlp } = require("./setup-bin");
@@ -9,18 +10,41 @@ const { ensureYtDlp } = require("./setup-bin");
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
-const DOWNLOADS = path.join(ROOT, "downloads");
-const UPLOADS = path.join(ROOT, "uploads");
 
-// Ensure required directories exist
-fs.mkdirSync(DOWNLOADS, { recursive: true });
-fs.mkdirSync(UPLOADS, { recursive: true });
+function resolveWritableDir(sub) {
+  try {
+    const localDir = path.join(ROOT, sub);
+    if (!fs.existsSync(localDir)) {
+      fs.mkdirSync(localDir, { recursive: true });
+    }
+    const testFile = path.join(localDir, ".write_test");
+    fs.writeFileSync(testFile, "1");
+    fs.unlinkSync(testFile);
+    return localDir;
+  } catch {
+    const tmpDir = path.join(os.tmpdir(), "vidssave", sub);
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
+    return tmpDir;
+  }
+}
+
+const DOWNLOADS = resolveWritableDir("downloads");
+const UPLOADS = resolveWritableDir("uploads");
 
 // Resolve FFmpeg (ffmpeg-static or system ffmpeg)
 let ffmpegPath = null;
 try {
-  ffmpegPath = require("ffmpeg-static");
+  let staticPath = require("ffmpeg-static");
+  if (staticPath && fs.existsSync(staticPath)) {
+    if (process.platform !== "win32") {
+      try { fs.chmodSync(staticPath, 0o755); } catch {}
+    }
+    ffmpegPath = staticPath;
+  }
 } catch {}
+
 if (!ffmpegPath || !fs.existsSync(ffmpegPath)) {
   try {
     const cmd = process.platform === "win32" ? "where ffmpeg" : "which ffmpeg";
@@ -45,6 +69,7 @@ const upload = multer({
 });
 
 app.use(express.json({ limit: "2mb" }));
+app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.use(express.static(path.join(ROOT, "public")));
 app.use("/downloads", express.static(DOWNLOADS));
 
@@ -363,3 +388,5 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`  Local URL: http://localhost:${PORT}`);
   console.log("====================================");
 });
+
+module.exports = app;

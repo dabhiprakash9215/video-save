@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const https = require("https");
 const http = require("http");
 const { execSync } = require("child_process");
@@ -9,6 +10,41 @@ const BIN_DIR = path.join(ROOT, "bin");
 const IS_WIN = process.platform === "win32";
 const BIN_NAME = IS_WIN ? "yt-dlp.exe" : "yt-dlp";
 const LOCAL_BIN_PATH = path.join(BIN_DIR, BIN_NAME);
+
+function getEffectiveBinDir() {
+  try {
+    if (!fs.existsSync(BIN_DIR)) {
+      fs.mkdirSync(BIN_DIR, { recursive: true });
+    }
+    const testFile = path.join(BIN_DIR, ".write_test");
+    fs.writeFileSync(testFile, "1");
+    fs.unlinkSync(testFile);
+    return BIN_DIR;
+  } catch {
+    const tmpBin = path.join(os.tmpdir(), "vidssave_bin");
+    if (!fs.existsSync(tmpBin)) {
+      fs.mkdirSync(tmpBin, { recursive: true });
+    }
+    return tmpBin;
+  }
+}
+
+function testBinary(binPath) {
+  try {
+    if (!fs.existsSync(binPath)) return false;
+    if (!IS_WIN) {
+      try { fs.chmodSync(binPath, 0o755); } catch {}
+    }
+    const out = execSync(`"${binPath}" --version`, {
+      stdio: ["pipe", "pipe", "ignore"],
+      timeout: 10000,
+      encoding: "utf8"
+    }).trim();
+    return Boolean(out && out.length > 0);
+  } catch {
+    return false;
+  }
+}
 
 function downloadFile(url, destPath) {
   return new Promise((resolve, reject) => {
@@ -57,27 +93,43 @@ function getDownloadUrl() {
   } else if (platform === "darwin") {
     return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos";
   } else {
-    // Linux (Hostinger, Ubuntu, Debian, CentOS, Alpine, etc.)
+    // Linux (Hostinger, Vercel, Ubuntu, Debian, CentOS, Alpine, etc.)
+    // Note: yt-dlp_linux is the standalone binary that includes Python runtime
+    // yt-dlp (generic) is a python script requiring python3 which is missing on Vercel/serverless
     if (arch === "arm64" || arch === "aarch64") {
       return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_aarch64";
     } else if (arch === "arm") {
       return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux_armv7l";
     }
-    return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
+    return "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux";
   }
 }
 
 async function ensureYtDlp() {
-  if (!fs.existsSync(BIN_DIR)) {
-    fs.mkdirSync(BIN_DIR, { recursive: true });
+  const targetDir = getEffectiveBinDir();
+  const targetBinPath = path.join(targetDir, BIN_NAME);
+
+  // 1. Check if bundled binary exists and works
+  if (fs.existsSync(LOCAL_BIN_PATH) && testBinary(LOCAL_BIN_PATH)) {
+    return LOCAL_BIN_PATH;
   }
 
-  // 1. Check if local binary exists in bin/
-  if (fs.existsSync(LOCAL_BIN_PATH)) {
-    if (!IS_WIN) {
-      try { fs.chmodSync(LOCAL_BIN_PATH, 0o755); } catch {}
-    }
-    return LOCAL_BIN_PATH;
+  // 1b. If bundled exists in read-only folder, try copying to writable tmp dir and test
+  if (fs.existsSync(LOCAL_BIN_PATH) && targetBinPath !== LOCAL_BIN_PATH) {
+    try {
+      fs.copyFileSync(LOCAL_BIN_PATH, targetBinPath);
+      if (!IS_WIN) {
+        try { fs.chmodSync(targetBinPath, 0o755); } catch {}
+      }
+      if (testBinary(targetBinPath)) {
+        return targetBinPath;
+      }
+    } catch {}
+  }
+
+  // 1c. Check if targetBinPath already exists and works
+  if (fs.existsSync(targetBinPath) && testBinary(targetBinPath)) {
+    return targetBinPath;
   }
 
   // 2. Check if yt-dlp is available globally on system PATH
@@ -86,21 +138,31 @@ async function ensureYtDlp() {
     const out = execSync(systemCmd, { stdio: ["pipe", "pipe", "ignore"], encoding: "utf8" }).trim();
     if (out) {
       const firstPath = out.split(/\r?\n/)[0].trim();
-      if (firstPath && fs.existsSync(firstPath)) {
+      if (firstPath && testBinary(firstPath)) {
         console.log(`[VidsSave] Using system yt-dlp binary at: ${firstPath}`);
         return firstPath;
       }
     }
   } catch {}
 
-  // 3. Auto-download the appropriate standalone binary
+  // 3. Auto-download the standalone binary
   const url = getDownloadUrl();
-  console.log(`[VidsSave] yt-dlp not found in ${BIN_DIR}. Auto-downloading binary for ${process.platform} (${process.arch})...`);
+  console.log(`[VidsSave] Installing standalone yt-dlp binary for ${process.platform} (${process.arch})...`);
   console.log(`[VidsSave] Downloading from: ${url}`);
   
-  await downloadFile(url, LOCAL_BIN_PATH);
-  console.log(`[VidsSave] Successfully installed yt-dlp to: ${LOCAL_BIN_PATH}`);
-  return LOCAL_BIN_PATH;
+  await downloadFile(url, targetBinPath);
+
+  if (!IS_WIN) {
+    try { fs.chmodSync(targetBinPath, 0o755); } catch {}
+  }
+
+  if (testBinary(targetBinPath)) {
+    console.log(`[VidsSave] Successfully installed standalone yt-dlp to: ${targetBinPath}`);
+    return targetBinPath;
+  } else {
+    console.warn(`[VidsSave] Warning: Installed binary at ${targetBinPath} might have compatibility issues on this OS.`);
+    return targetBinPath;
+  }
 }
 
 if (require.main === module) {
