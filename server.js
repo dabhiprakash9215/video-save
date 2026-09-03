@@ -97,10 +97,12 @@ function getCommonYtDlpArgs() {
     "--no-warnings",
     "--restrict-filenames",
     "--force-ipv4",
+    "--retries", "3",
+    "--fragment-retries", "3",
     "--user-agent",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36",
     "--extractor-args",
-    "youtube:player_client=ios,android,web,mweb;player_skip=webpage,configs"
+    "youtube:player_client=android_creator,android,ios;player_skip=webpage,configs"
   ];
 
   if (ffmpegPath) {
@@ -121,7 +123,7 @@ function getCommonYtDlpArgs() {
   } else if (process.env.YOUTUBE_COOKIES) {
     // If passed directly as raw string, write to a temp cookie file
     try {
-      const tempCookiePath = path.join(ROOT, "downloads", "temp_cookies.txt");
+      const tempCookiePath = path.join(DOWNLOADS, "temp_cookies.txt");
       fs.writeFileSync(tempCookiePath, process.env.YOUTUBE_COOKIES, "utf8");
       args.push("--cookies", tempCookiePath);
     } catch {}
@@ -150,7 +152,7 @@ function run(command, args) {
   });
 }
 
-// Background cleanup routine to prevent Hostinger disk space from filling up
+// Background cleanup routine to prevent disk space from filling up
 function cleanOldFiles() {
   const maxAgeMs = 30 * 60 * 1000; // 30 minutes
   const now = Date.now();
@@ -213,6 +215,24 @@ app.post("/api/info", async (req, res) => {
       return res.status(400).json({ error: "Enter a valid YouTube URL." });
     }
 
+    // 1. First try official YouTube oEmbed API (instant, never blocked by bot check)
+    try {
+      const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, {
+        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (oembedRes.ok) {
+        const oembed = await oembedRes.json();
+        return res.json({
+          ok: true,
+          title: oembed.title || "YouTube video",
+          duration: 0,
+          thumbnail: oembed.thumbnail_url || ""
+        });
+      }
+    } catch {}
+
+    // 2. Fallback to yt-dlp
     const ytDlp = await getYtDlp();
     const args = [
       ...getCommonYtDlpArgs(),
