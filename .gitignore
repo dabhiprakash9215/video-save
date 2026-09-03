@@ -3,7 +3,7 @@ downloads/*
 !downloads/.gitkeep
 uploads/*
 !uploads/.gitkeep
-bin/yt-dlp.exe
-bin/yt-dlp
-cookies.txt
-.env
+bin/*
+!bin/.gitkeep
+temp_cookies.txt
+.DS_Store

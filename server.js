@@ -68,7 +68,7 @@ const upload = multer({
   limits: { fileSize: 500 * 1024 * 1024 }
 });
 
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "5mb" }));
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.use(express.static(path.join(ROOT, "public")));
 app.use("/downloads", express.static(DOWNLOADS));
@@ -91,7 +91,57 @@ function youtubeUrlOk(value) {
   }
 }
 
-function getCommonYtDlpArgs() {
+function resolveCookieFile(customCookieText) {
+  // 1. If cookie text is supplied with request
+  if (customCookieText && typeof customCookieText === "string" && customCookieText.trim().length > 10) {
+    try {
+      const cookieFileName = `req_cookie_${crypto.randomBytes(6).toString("hex")}.txt`;
+      const cookieFilePath = path.join(DOWNLOADS, cookieFileName);
+      fs.writeFileSync(cookieFilePath, customCookieText.trim(), "utf8");
+      return { path: cookieFilePath, temporary: true };
+    } catch {}
+  }
+
+  // 2. Custom file env
+  const envFile = process.env.COOKIES_FILE || process.env.YOUTUBE_COOKIES_FILE;
+  if (envFile && fs.existsSync(envFile)) {
+    return { path: envFile, temporary: false };
+  }
+
+  // 3. Environment variable string or base64
+  const envCookie = process.env.YOUTUBE_COOKIES || process.env.YOUTUBE_COOKIES_BASE64;
+  if (envCookie && typeof envCookie === "string" && envCookie.trim().length > 10) {
+    try {
+      let content = envCookie.trim();
+      // Handle base64 encoded cookies
+      if (!content.includes("\n") && !content.includes("\t") && content.length > 50) {
+        try {
+          const decoded = Buffer.from(content, "base64").toString("utf8");
+          if (decoded.includes("youtube.com") || decoded.includes(".google.com")) {
+            content = decoded;
+          }
+        } catch {}
+      }
+      const cookieFilePath = path.join(DOWNLOADS, "env_cookies.txt");
+      fs.writeFileSync(cookieFilePath, content, "utf8");
+      return { path: cookieFilePath, temporary: false };
+    } catch {}
+  }
+
+  // 4. File in root or bin
+  const rootCookies = path.join(ROOT, "cookies.txt");
+  const binCookies = path.join(ROOT, "bin", "cookies.txt");
+  if (fs.existsSync(rootCookies)) {
+    return { path: rootCookies, temporary: false };
+  }
+  if (fs.existsSync(binCookies)) {
+    return { path: binCookies, temporary: false };
+  }
+
+  return null;
+}
+
+function getCommonYtDlpArgs(cookieInfo = null) {
   const args = [
     "--no-playlist",
     "--no-warnings",
@@ -99,34 +149,19 @@ function getCommonYtDlpArgs() {
     "--force-ipv4",
     "--retries", "3",
     "--fragment-retries", "3",
+    "--no-check-certificates",
     "--user-agent",
-    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
     "--extractor-args",
-    "youtube:player_client=android_creator,android,ios;player_skip=webpage,configs"
+    "youtube:player_client=tv_embedded,web_creator,mweb,android"
   ];
 
   if (ffmpegPath) {
     args.push("--ffmpeg-location", ffmpegPath);
   }
 
-  // Check for cookies file (cookies.txt in root or bin, or COOKIES_FILE env, or YOUTUBE_COOKIES env)
-  const rootCookies = path.join(ROOT, "cookies.txt");
-  const binCookies = path.join(ROOT, "bin", "cookies.txt");
-  const customCookies = process.env.COOKIES_FILE || process.env.YOUTUBE_COOKIES_FILE;
-
-  if (customCookies && fs.existsSync(customCookies)) {
-    args.push("--cookies", customCookies);
-  } else if (fs.existsSync(rootCookies)) {
-    args.push("--cookies", rootCookies);
-  } else if (fs.existsSync(binCookies)) {
-    args.push("--cookies", binCookies);
-  } else if (process.env.YOUTUBE_COOKIES) {
-    // If passed directly as raw string, write to a temp cookie file
-    try {
-      const tempCookiePath = path.join(DOWNLOADS, "temp_cookies.txt");
-      fs.writeFileSync(tempCookiePath, process.env.YOUTUBE_COOKIES, "utf8");
-      args.push("--cookies", tempCookiePath);
-    } catch {}
+  if (cookieInfo && cookieInfo.path && fs.existsSync(cookieInfo.path)) {
+    args.push("--cookies", cookieInfo.path);
   }
 
   // Check for Proxy configuration
@@ -162,7 +197,7 @@ function cleanOldFiles() {
       if (!fs.existsSync(dir)) return;
       const files = fs.readdirSync(dir);
       for (const file of files) {
-        if (file === ".gitkeep" || file === "temp_cookies.txt") continue;
+        if (file === ".gitkeep" || file === "env_cookies.txt") continue;
         const filePath = path.join(dir, file);
         try {
           const stats = fs.statSync(filePath);
@@ -191,6 +226,8 @@ app.get("/api/health", async (req, res) => {
     ytdlpVersion = e.message;
   }
 
+  const cookieInfo = resolveCookieFile();
+
   res.json({
     ok: true,
     status: "online",
@@ -204,38 +241,42 @@ app.get("/api/health", async (req, res) => {
     ffmpeg: {
       ready: !!ffmpegPath,
       path: ffmpegPath
-    }
+    },
+    hasCookies: !!cookieInfo,
+    isServerless: !!process.env.VERCEL
   });
 });
 
 app.post("/api/info", async (req, res) => {
+  const { url, cookies: userCookies } = req.body || {};
+  if (!youtubeUrlOk(url)) {
+    return res.status(400).json({ error: "Enter a valid YouTube URL." });
+  }
+
+  // 1. First try official YouTube oEmbed API (instant, never blocked by bot check)
   try {
-    const { url } = req.body || {};
-    if (!youtubeUrlOk(url)) {
-      return res.status(400).json({ error: "Enter a valid YouTube URL." });
-    }
-
-    // 1. First try official YouTube oEmbed API (instant, never blocked by bot check)
-    try {
-      const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, {
-        headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
-        signal: AbortSignal.timeout(5000)
+    const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (oembedRes.ok) {
+      const oembed = await oembedRes.json();
+      return res.json({
+        ok: true,
+        title: oembed.title || "YouTube video",
+        author: oembed.author_name || "",
+        thumbnail: oembed.thumbnail_url || `https://i.ytimg.com/vi/${extractVideoId(url)}/hqdefault.jpg`,
+        duration: 0
       });
-      if (oembedRes.ok) {
-        const oembed = await oembedRes.json();
-        return res.json({
-          ok: true,
-          title: oembed.title || "YouTube video",
-          duration: 0,
-          thumbnail: oembed.thumbnail_url || ""
-        });
-      }
-    } catch {}
+    }
+  } catch {}
 
-    // 2. Fallback to yt-dlp
+  // 2. Fallback to yt-dlp metadata
+  const cookieInfo = resolveCookieFile(userCookies);
+  try {
     const ytDlp = await getYtDlp();
     const args = [
-      ...getCommonYtDlpArgs(),
+      ...getCommonYtDlpArgs(cookieInfo),
       "--dump-single-json",
       "--skip-download",
       url
@@ -246,53 +287,149 @@ app.post("/api/info", async (req, res) => {
     res.json({
       ok: true,
       title: data.title || "YouTube video",
+      author: data.uploader || data.channel || "",
       duration: data.duration || 0,
-      thumbnail: data.thumbnail || ""
+      thumbnail: data.thumbnail || `https://i.ytimg.com/vi/${extractVideoId(url)}/hqdefault.jpg`
     });
   } catch (e) {
+    // If yt-dlp fails but we can extract video ID, return basic info
+    const vid = extractVideoId(url);
+    if (vid) {
+      return res.json({
+        ok: true,
+        title: "YouTube Video",
+        author: "",
+        duration: 0,
+        thumbnail: `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`
+      });
+    }
     res.status(500).json({ error: friendlyError(e) });
+  } finally {
+    if (cookieInfo && cookieInfo.temporary && fs.existsSync(cookieInfo.path)) {
+      try { fs.unlinkSync(cookieInfo.path); } catch {}
+    }
   }
 });
 
 app.post("/api/download", async (req, res) => {
-  try {
-    const { url, format } = req.body || {};
-    if (!youtubeUrlOk(url)) {
-      return res.status(400).json({ error: "Enter a valid YouTube URL." });
-    }
-    if (!["mp3", "mp4"].includes(format)) {
-      return res.status(400).json({ error: "Choose MP3 or MP4 format." });
-    }
+  const { url, format, quality, cookies: userCookies } = req.body || {};
+  if (!youtubeUrlOk(url)) {
+    return res.status(400).json({ error: "Enter a valid YouTube URL." });
+  }
+  if (!["mp3", "mp4"].includes(format)) {
+    return res.status(400).json({ error: "Choose MP3 or MP4 format." });
+  }
 
+  const cookieInfo = resolveCookieFile(userCookies);
+
+  try {
     const ytDlp = await getYtDlp();
     if (!ytDlp) {
-      return res.status(500).json({ error: "yt-dlp is not ready yet. Please retry in a few seconds." });
+      return res.status(500).json({ error: "Downloader binary is initializing. Please retry in a few seconds." });
     }
 
     const id = crypto.randomBytes(10).toString("hex");
     const titleTemplate = path.join(DOWNLOADS, `${id}.%(ext)s`);
 
-    let args;
-    if (format === "mp3") {
-      args = [
-        ...getCommonYtDlpArgs(),
-        "-x",
-        "--audio-format", "mp3",
-        "--audio-quality", "192K",
-        "-o", titleTemplate,
-        url
+    // Multi-client fallback strategy for downloading
+    const clientAttempts = [
+      "tv_embedded,web_creator,mweb",
+      "android_vr,tv_embedded",
+      "web,mweb",
+      ""
+    ];
+
+    let downloadSuccess = false;
+    let lastError = null;
+
+    for (const clientGroup of clientAttempts) {
+      let args = [
+        "--no-playlist",
+        "--no-warnings",
+        "--restrict-filenames",
+        "--force-ipv4",
+        "--retries", "3",
+        "--fragment-retries", "3",
+        "--no-check-certificates"
       ];
-    } else {
-      args = [
-        ...getCommonYtDlpArgs(),
-        "-f", "bv*+ba/b",
-        "--merge-output-format", "mp4",
-        "-o", titleTemplate,
-        url
-      ];
+
+      if (clientGroup) {
+        args.push("--extractor-args", `youtube:player_client=${clientGroup}`);
+      }
+
+      if (ffmpegPath) {
+        args.push("--ffmpeg-location", ffmpegPath);
+      }
+
+      if (cookieInfo && cookieInfo.path && fs.existsSync(cookieInfo.path)) {
+        args.push("--cookies", cookieInfo.path);
+      }
+
+      const proxy = process.env.PROXY_URL || process.env.HTTP_PROXY || process.env.HTTPS_PROXY;
+      if (proxy) {
+        args.push("--proxy", proxy);
+      }
+
+      if (format === "mp3") {
+        if (ffmpegPath) {
+          args.push(
+            "-f", "ba/140/ba[ext=m4a]/bestaudio/18/b",
+            "-x",
+            "--audio-format", "mp3",
+            "--audio-quality", quality === "320" ? "320K" : "192K",
+            "-o", titleTemplate,
+            url
+          );
+        } else {
+          args.push(
+            "-f", "ba/140/ba[ext=m4a]/bestaudio/18/b",
+            "-o", titleTemplate,
+            url
+          );
+        }
+      } else {
+        // MP4 format
+        if (quality === "1080" && ffmpegPath) {
+          args.push(
+            "-f", "bv*[ext=mp4][height<=1080]+ba[ext=m4a]/b[ext=mp4][height<=1080]/best[ext=mp4]/best",
+            "--merge-output-format", "mp4",
+            "-o", titleTemplate,
+            url
+          );
+        } else if (quality === "720" && ffmpegPath) {
+          args.push(
+            "-f", "bv*[ext=mp4][height<=720]+ba[ext=m4a]/b[ext=mp4][height<=720]/18/best[ext=mp4]/best",
+            "--merge-output-format", "mp4",
+            "-o", titleTemplate,
+            url
+          );
+        } else {
+          // Standard / 360p-720p direct single stream
+          args.push(
+            "-f", "18/b[ext=mp4]/best[ext=mp4]/best",
+            "-o", titleTemplate,
+            url
+          );
+        }
+      }
+
+      try {
+        await run(ytDlp, args);
+        downloadSuccess = true;
+        break;
+      } catch (err) {
+        lastError = err;
+        // If error was NOT bot check, break or continue
+        const errMsg = String(err.message || "");
+        if (!/bot|403|Forbidden|Sign in/i.test(errMsg)) {
+          // Try next client
+        }
+      }
     }
 
-    await run(ytDlp, args);
+    if (!downloadSuccess) {
+      throw lastError || new Error("Failed to download video stream.");
+    }
 
     const files = fs.readdirSync(DOWNLOADS)
       .filter((f) => f.startsWith(id + ".") && !f.endsWith(".part") && !f.endsWith(".ytdl"));
@@ -309,6 +446,10 @@ app.post("/api/download", async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ error: friendlyError(e) });
+  } finally {
+    if (cookieInfo && cookieInfo.temporary && fs.existsSync(cookieInfo.path)) {
+      try { fs.unlinkSync(cookieInfo.path); } catch {}
+    }
   }
 });
 
@@ -372,6 +513,18 @@ app.post("/api/cut", upload.single("media"), async (req, res) => {
   }
 });
 
+function extractVideoId(url) {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) {
+      return u.pathname.slice(1).split("?")[0];
+    }
+    return u.searchParams.get("v") || "";
+  } catch {
+    return "";
+  }
+}
+
 function parseTime(v) {
   if (v === undefined || v === null || v === "") return NaN;
   const s = String(v).trim();
@@ -385,12 +538,12 @@ function parseTime(v) {
 
 function friendlyError(e) {
   const m = String(e.message || e);
-  if (/Sign in to confirm|bot|cookies|429|Too Many Requests/i.test(m)) {
-    return "YouTube requested bot verification for this live server IP. Add a cookies.txt file or configure a proxy in environment variables.";
+  if (/Sign in to confirm you’re not a bot|Sign in to confirm you're not a bot|bot verification|HTTP Error 403: Forbidden|403.*Forbidden/i.test(m)) {
+    return "YouTube requested bot verification for this server IP. To fix: Click '⚙️ Cookie Settings' in the header to paste YouTube cookies, or add YOUTUBE_COOKIES in your Vercel Environment Variables.";
   }
-  if (/ffmpeg/i.test(m)) return "FFmpeg processing error. Ensure FFmpeg is installed.";
-  if (/yt-dlp/i.test(m)) return "yt-dlp engine error. Please check the video URL or retry.";
-  return m.slice(-800);
+  if (/ffmpeg/i.test(m) && !/warning/i.test(m)) return "FFmpeg processing error. Ensure FFmpeg is available.";
+  if (/yt-dlp/i.test(m) && /exited with code/i.test(m)) return "Download stream error. Please check the video URL and retry.";
+  return m.slice(-600);
 }
 
 // Only start standalone HTTP server if not in Vercel Serverless environment
@@ -412,3 +565,4 @@ if (!process.env.VERCEL) {
 }
 
 module.exports = app;
+

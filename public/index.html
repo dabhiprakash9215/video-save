@@ -1,113 +1,470 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="scroll-smooth">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VidsSave - MP3 MP4 Downloader & Cutter</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-body{font-family:Inter,Arial,sans-serif}
-.gradient{background:linear-gradient(90deg,#7c3aed,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.card{box-shadow:0 20px 60px rgba(0,0,0,.08)}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>VidsSave - High Speed YouTube Downloader & Media Cutter</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              900: '#4c1d95',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .gradient-text {
+      background: linear-gradient(135deg, #7c3aed 0%, #ec4899 50%, #f43f5e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-glow {
+      background: radial-gradient(circle at 50% 20%, rgba(124, 58, 237, 0.12) 0%, rgba(236, 72, 153, 0.05) 50%, transparent 80%);
+    }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.08), 0 0 1px 1px rgba(0, 0, 0, 0.04);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
 </head>
-<body class="bg-white text-gray-900">
-<header class="border-b bg-white sticky top-0 z-10">
-<div class="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
-<a href="#" class="text-2xl font-extrabold">Vids<span class="gradient">Save</span></a>
-<nav class="hidden md:flex gap-7 text-sm font-semibold">
-<a href="#download">Downloader</a><a href="#cutter">Cutter</a><a href="#how">How to Use</a>
-</nav>
-<a href="#download" class="bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm">Get Started</a>
-</div></header>
+<body class="bg-slate-50 text-slate-900 font-sans min-h-screen flex flex-col selection:bg-purple-500 selection:text-white">
 
-<section class="bg-gradient-to-b from-purple-50 to-white">
-<div class="max-w-5xl mx-auto px-5 py-16 text-center">
-<div class="inline-flex bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm mb-5">⚡ Fast & Easy Media Tool</div>
-<h1 class="text-4xl md:text-6xl font-black">Download & Cut <span class="gradient">MP3 / MP4</span></h1>
-<p class="mt-5 text-gray-600 text-lg max-w-2xl mx-auto">YouTube downloader with MP3/MP4 conversion and a simple local media cutter.</p>
+  <!-- Navigation Header -->
+  <header class="border-b border-slate-200/80 bg-white/90 backdrop-blur-md sticky top-0 z-30 transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+      <a href="#" class="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-white shadow-md shadow-purple-500/20">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </div>
+        <span>Vids<span class="gradient-text">Save</span></span>
+      </a>
 
-<div id="download" class="card bg-white rounded-2xl p-4 mt-9 max-w-4xl mx-auto border text-left">
-<h2 class="text-xl font-bold mb-4">YouTube Downloader</h2>
-<form id="downloadForm" class="flex flex-col md:flex-row gap-3">
-<input id="url" type="url" required placeholder="Paste YouTube URL here..." class="flex-1 border rounded-xl px-5 py-4 outline-none focus:ring-2 focus:ring-purple-500">
-<select id="format" class="border rounded-xl px-4 py-4"><option value="mp4">MP4 Video</option><option value="mp3">MP3 Audio</option></select>
-<button id="downloadBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-7 py-4 rounded-xl">Download</button>
-</form>
-<div id="info" class="hidden mt-4 border rounded-xl p-4"></div>
-<div id="downloadStatus" class="hidden mt-4 rounded-xl p-4"></div>
-<div id="downloadResult" class="hidden mt-4 bg-gray-50 rounded-xl p-5">
-<div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-<div><b id="downloadTitle">File ready</b><p id="downloadType" class="text-sm text-gray-500"></p></div>
-<a id="downloadLink" class="bg-green-600 text-white px-5 py-3 rounded-lg" download>Download File</a>
-</div></div>
-</div>
-</div>
-</section>
+      <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+        <a href="#download" class="hover:text-purple-600 transition">Downloader</a>
+        <a href="#cutter" class="hover:text-purple-600 transition">Media Cutter</a>
+        <a href="#guide" class="hover:text-purple-600 transition">Cookies & Bot Fix</a>
+      </nav>
 
-<section id="cutter" class="py-16 bg-gray-50">
-<div class="max-w-4xl mx-auto px-5">
-<div class="text-center"><h2 class="text-3xl font-bold">MP3 / MP4 Cutter</h2><p class="text-gray-500 mt-2">Upload a media file and cut the exact part you need.</p></div>
-<div class="bg-white border rounded-2xl p-6 mt-8">
-<form id="cutForm">
-<input id="media" name="media" type="file" accept="audio/*,video/*" required class="w-full border rounded-xl p-4">
-<div class="grid md:grid-cols-2 gap-4 mt-4">
-<div><label class="text-sm font-semibold">Start (seconds or HH:MM:SS)</label><input name="start" value="0" class="mt-2 w-full border rounded-xl px-4 py-3"></div>
-<div><label class="text-sm font-semibold">End (seconds or HH:MM:SS)</label><input name="end" placeholder="60" required class="mt-2 w-full border rounded-xl px-4 py-3"></div>
-</div>
-<button id="cutBtn" class="mt-5 bg-gray-900 text-white px-6 py-3 rounded-xl font-bold">Cut Media</button>
-</form>
-<div id="cutStatus" class="hidden mt-4 rounded-xl p-4"></div>
-<div id="cutResult" class="hidden mt-4 bg-gray-50 rounded-xl p-5">
-<b>Cut file is ready ✅</b><br><a id="cutLink" class="inline-block mt-3 bg-green-600 text-white px-5 py-3 rounded-lg" download>Download Cut File</a>
-</div>
-</div>
-</div>
-</section>
+      <div class="flex items-center gap-3">
+        <button id="openSettingsBtn" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold border border-slate-200/60 transition shadow-sm">
+          <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Cookie Settings</span>
+          <span id="cookieBadge" class="hidden w-2 h-2 rounded-full bg-emerald-500"></span>
+        </button>
+        <a href="#download" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm">Get Started</a>
+      </div>
+    </div>
+  </header>
 
-<section id="how" class="py-16">
-<div class="max-w-6xl mx-auto px-5">
-<h2 class="text-3xl font-bold text-center">How to Use</h2>
-<div class="grid md:grid-cols-3 gap-7 mt-9">
-<div class="border rounded-xl p-7"><b class="text-3xl">1️⃣</b><h3 class="font-bold text-xl mt-4">Paste URL</h3><p class="text-gray-500 mt-2">Paste a public YouTube URL.</p></div>
-<div class="border rounded-xl p-7"><b class="text-3xl">2️⃣</b><h3 class="font-bold text-xl mt-4">Choose MP3/MP4</h3><p class="text-gray-500 mt-2">Select audio or video format.</p></div>
-<div class="border rounded-xl p-7"><b class="text-3xl">3️⃣</b><h3 class="font-bold text-xl mt-4">Download</h3><p class="text-gray-500 mt-2">Wait for processing and download your file.</p></div>
-</div>
-</div></section>
+  <!-- Hero & Main Downloader Section -->
+  <main class="flex-1 hero-glow">
+    <section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 text-center">
+      <div class="inline-flex items-center gap-2 bg-purple-50 text-purple-700 border border-purple-200/80 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
+        Fast YouTube MP3 & MP4 Converter
+      </div>
 
-<footer class="bg-gray-900 text-white"><div class="max-w-7xl mx-auto px-5 py-10 text-center"><b class="text-2xl">VidsSave</b><p class="text-gray-400 mt-3">Downloader & media cutter.</p><p class="text-gray-500 text-sm mt-5">Use only content you own or have permission to download.</p></div></footer>
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 max-w-3xl mx-auto leading-tight">
+        Download & Convert <br class="hidden sm:inline"/><span class="gradient-text">YouTube in Seconds</span>
+      </h1>
+      
+      <p class="mt-4 text-slate-600 text-base sm:text-lg max-w-2xl mx-auto font-normal">
+        Save high quality MP4 videos or crystal clear MP3 audio files with built-in bot bypass and media cutter.
+      </p>
 
-<script>
-const $=id=>document.getElementById(id);
-function msg(el,text,error=false){el.classList.remove("hidden","bg-red-50","text-red-700","bg-purple-50","text-purple-700","bg-green-50","text-green-700");el.classList.add(error?"bg-red-50":"bg-purple-50",error?"text-red-700":"text-purple-700");el.textContent=text}
+      <!-- Main Downloader Card -->
+      <div id="download" class="glass-card rounded-3xl p-5 sm:p-8 mt-10 max-w-3xl mx-auto border border-slate-200/80 text-left">
+        <form id="downloadForm" class="space-y-4">
+          <div class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+              </div>
+              <input id="url" type="url" required placeholder="Paste YouTube link here (e.g. https://youtu.be/...)" class="w-full pl-11 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 font-medium outline-none focus:bg-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition">
+            </div>
 
-$("downloadForm").addEventListener("submit",async e=>{
-e.preventDefault(); $("downloadResult").classList.add("hidden");
-const btn=$("downloadBtn"), status=$("downloadStatus"), url=$("url").value.trim(), format=$("format").value;
-btn.disabled=true;btn.textContent="Processing...";msg(status,"Getting video information...");
-try{
-const infoRes=await fetch("/api/info",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});
-const info=await infoRes.json(); if(!infoRes.ok) throw new Error(info.error);
-$("info").classList.remove("hidden");$("info").innerHTML="<b>"+escapeHtml(info.title)+"</b>";
-msg(status,"Downloading and converting. Please wait...");
-const r=await fetch("/api/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,format})});
-const data=await r.json(); if(!r.ok) throw new Error(data.error);
-$("downloadTitle").textContent=info.title||"File ready";$("downloadType").textContent="Format: "+format.toUpperCase();
-$("downloadLink").href=data.downloadUrl;$("downloadLink").download=data.filename;$("downloadResult").classList.remove("hidden");
-msg(status,"Completed successfully.");
-}catch(err){msg(status,err.message,true)}finally{btn.disabled=false;btn.textContent="Download"}
-});
+            <div class="flex gap-2">
+              <select id="format" class="bg-slate-50 border border-slate-200 text-slate-800 font-semibold px-4 py-4 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-purple-500 transition cursor-pointer">
+                <option value="mp4">🎬 MP4 Video</option>
+                <option value="mp3">🎵 MP3 Audio</option>
+              </select>
 
-$("cutForm").addEventListener("submit",async e=>{
-e.preventDefault(); $("cutResult").classList.add("hidden");
-const btn=$("cutBtn"),status=$("cutStatus");btn.disabled=true;btn.textContent="Cutting...";
-try{
-const fd=new FormData(e.target);msg(status,"Uploading and cutting media...");
-const r=await fetch("/api/cut",{method:"POST",body:fd});const data=await r.json();if(!r.ok)throw new Error(data.error);
-$("cutLink").href=data.downloadUrl;$("cutLink").download=data.filename;$("cutResult").classList.remove("hidden");msg(status,"Cut completed successfully.");
-}catch(err){msg(status,err.message,true)}finally{btn.disabled=false;btn.textContent="Cut Media"}
-});
+              <select id="quality" class="bg-slate-50 border border-slate-200 text-slate-800 font-semibold px-4 py-4 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-purple-500 transition cursor-pointer">
+                <option value="best">Best Quality</option>
+                <option value="1080">1080p Full HD</option>
+                <option value="720">720p HD</option>
+                <option value="320">320kbps (MP3)</option>
+              </select>
+            </div>
+          </div>
 
-function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-</script>
-</body></html>
+          <button id="downloadBtn" type="submit" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-500/25 transition flex items-center justify-center gap-2 cursor-pointer">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span>Start Download</span>
+          </button>
+        </form>
+
+        <!-- Video Info Card Preview -->
+        <div id="videoInfoCard" class="hidden mt-6 bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all">
+          <div class="flex flex-col sm:flex-row gap-4 items-center">
+            <img id="videoThumb" class="w-full sm:w-36 h-24 object-cover rounded-xl shadow-sm bg-slate-200" src="" alt="Thumbnail">
+            <div class="flex-1 min-w-0 text-left">
+              <h3 id="videoTitle" class="font-bold text-slate-900 text-sm sm:text-base line-clamp-2"></h3>
+              <p id="videoAuthor" class="text-xs text-slate-500 mt-1 font-medium"></p>
+              <div class="flex items-center gap-2 mt-2">
+                <span class="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-semibold" id="formatBadge">MP4</span>
+                <span class="text-xs text-slate-400">Ready to download</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status & Messages -->
+        <div id="downloadStatus" class="hidden mt-4 rounded-2xl p-4 text-sm font-medium transition-all"></div>
+
+        <!-- Download Ready Result Card -->
+        <div id="downloadResult" class="hidden mt-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 transition-all">
+          <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+              </div>
+              <div>
+                <b id="resultTitle" class="text-slate-900 text-sm sm:text-base font-bold line-clamp-1">File is ready!</b>
+                <p id="resultType" class="text-xs text-emerald-700 font-semibold mt-0.5">Click below to save to your device</p>
+              </div>
+            </div>
+            <a id="downloadLink" href="#" download class="w-full sm:w-auto text-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              <span>Download File</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MP3 / MP4 Media Cutter Section -->
+    <section id="cutter" class="py-16 bg-white border-t border-slate-200/80">
+      <div class="max-w-3xl mx-auto px-4 sm:px-6">
+        <div class="text-center mb-8">
+          <div class="inline-flex items-center gap-1.5 bg-pink-50 text-pink-700 border border-pink-200 px-3 py-1 rounded-full text-xs font-bold uppercase mb-3">
+            ✂️ Trim Any Audio / Video
+          </div>
+          <h2 class="text-3xl font-extrabold text-slate-900">Audio & Video Cutter</h2>
+          <p class="text-slate-500 text-sm mt-1">Upload any local media file and extract exact segment in seconds.</p>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+          <form id="cutForm" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Select Media File (MP3 / MP4)</label>
+              <input id="media" name="media" type="file" accept="audio/*,video/*" required class="w-full border border-slate-200 rounded-2xl p-3.5 bg-white text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Start Time (sec or 00:00:00)</label>
+                <input name="start" value="0" placeholder="0 or 00:01:15" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">End Time (sec or 00:00:00)</label>
+                <input name="end" placeholder="60 or 00:02:30" required class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+            </div>
+
+            <button id="cutBtn" type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl transition shadow-sm">
+              Trim & Process Media
+            </button>
+          </form>
+
+          <div id="cutStatus" class="hidden mt-4 rounded-xl p-4 text-sm font-medium"></div>
+
+          <div id="cutResult" class="hidden mt-4 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div>
+              <b class="text-slate-900 text-sm">Trimmed file ready!</b>
+              <p class="text-xs text-emerald-700">Your media segment was successfully cut.</p>
+            </div>
+            <a id="cutLink" href="#" download class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition">
+              Download Cut File
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bot Verification / Cookies Setup Guide -->
+    <section id="guide" class="py-16 bg-slate-100/70 border-t border-slate-200/80">
+      <div class="max-w-4xl mx-auto px-4 sm:px-6">
+        <div class="text-center mb-10">
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">How to Fix "YouTube Bot Verification" on Vercel</h2>
+          <p class="text-slate-600 text-sm mt-2 max-w-xl mx-auto">
+            YouTube restricts automated downloads on cloud server datacenter IPs (Vercel, AWS, GCP). You can solve this in 30 seconds using Cookies.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg mb-4">1</div>
+            <h3 class="font-bold text-slate-900 text-base">Method 1: Direct Cookie Settings (Fastest)</h3>
+            <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+              1. Install Chrome/Edge extension: <a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbngbenkjcffliehddfacjne" target="_blank" class="text-purple-600 underline font-semibold">Get cookies.txt LOCALLY</a>.<br>
+              2. Open YouTube while logged in and click the extension to copy cookies.<br>
+              3. Click <b>"Cookie Settings"</b> at top-right of this page, paste the text, and click <b>Save</b>.
+            </p>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="w-10 h-10 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center font-bold text-lg mb-4">2</div>
+            <h3 class="font-bold text-slate-900 text-base">Method 2: Vercel Environment Variable</h3>
+            <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+              1. Go to your Vercel Dashboard &gt; Project &gt; <b>Settings</b> &gt; <b>Environment Variables</b>.<br>
+              2. Add variable key: <code class="bg-slate-100 px-1.5 py-0.5 rounded text-purple-700 font-mono font-bold">YOUTUBE_COOKIES</code>.<br>
+              3. Paste your full Netscape cookies text into the Value and Redeploy.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Cookie Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 transform transition-all">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold">⚙️</div>
+          <div>
+            <h3 class="font-extrabold text-slate-900 text-lg">YouTube Cookie Settings</h3>
+            <p class="text-xs text-slate-500">Bypasses YouTube bot verification on cloud hosting</p>
+          </div>
+        </div>
+        <button id="closeSettingsBtn" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="mt-4 space-y-3">
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Paste Netscape format cookies.txt</label>
+        <textarea id="cookieInput" rows="8" placeholder="# Netscape HTTP Cookie File&#10;.youtube.com	TRUE	/	TRUE	1798765432	SID	..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-mono text-xs text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-purple-500 custom-scrollbar"></textarea>
+        <p class="text-xs text-slate-400">Cookies are saved privately in your browser storage and sent with your download requests to authenticate with YouTube.</p>
+      </div>
+
+      <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-end">
+        <button id="clearCookieBtn" class="text-xs font-bold text-rose-600 hover:bg-rose-50 px-4 py-2.5 rounded-xl transition">
+          Clear Saved Cookies
+        </button>
+        <button id="saveCookieBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-md shadow-purple-600/20 transition">
+          Save Cookies
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-slate-950 text-white border-t border-slate-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+      <div class="flex items-center gap-2">
+        <b class="text-white text-sm">VidsSave</b>
+        <span>• High-Speed Media Downloader</span>
+      </div>
+      <p>Use only for content you have rights or permission to download.</p>
+    </div>
+  </footer>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    
+    // Cookie management
+    const COOKIE_KEY = "vidssave_user_cookies";
+    function getStoredCookies() {
+      return localStorage.getItem(COOKIE_KEY) || "";
+    }
+    function updateCookieBadge() {
+      const c = getStoredCookies();
+      if (c && c.trim().length > 10) {
+        $("cookieBadge").classList.remove("hidden");
+      } else {
+        $("cookieBadge").classList.add("hidden");
+      }
+    }
+    updateCookieBadge();
+
+    // Modal Events
+    $("openSettingsBtn").addEventListener("click", () => {
+      $("cookieInput").value = getStoredCookies();
+      $("settingsModal").classList.remove("hidden");
+    });
+    $("closeSettingsBtn").addEventListener("click", () => {
+      $("settingsModal").classList.add("hidden");
+    });
+    $("saveCookieBtn").addEventListener("click", () => {
+      const val = $("cookieInput").value.trim();
+      localStorage.setItem(COOKIE_KEY, val);
+      updateCookieBadge();
+      $("settingsModal").classList.add("hidden");
+      showToast("Cookies saved successfully!");
+    });
+    $("clearCookieBtn").addEventListener("click", () => {
+      localStorage.removeItem(COOKIE_KEY);
+      $("cookieInput").value = "";
+      updateCookieBadge();
+      showToast("Cookies cleared");
+    });
+
+    function showToast(msg) {
+      const status = $("downloadStatus");
+      showMsg(status, msg, false);
+      setTimeout(() => status.classList.add("hidden"), 3000);
+    }
+
+    function showMsg(el, text, isError = false) {
+      el.classList.remove("hidden", "bg-rose-50", "text-rose-700", "border-rose-200", "bg-purple-50", "text-purple-700", "border-purple-200", "bg-emerald-50", "text-emerald-700");
+      if (isError) {
+        el.classList.add("bg-rose-50", "text-rose-700", "border", "border-rose-200");
+      } else {
+        el.classList.add("bg-purple-50", "text-purple-700", "border", "border-purple-200");
+      }
+      el.innerHTML = text;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    // Auto preview metadata on typing / paste
+    let debounceTimer;
+    $("url").addEventListener("input", e => {
+      clearTimeout(debounceTimer);
+      const url = e.target.value.trim();
+      if (url.length > 15 && (url.includes("youtube.com") || url.includes("youtu.be"))) {
+        debounceTimer = setTimeout(() => fetchInfo(url), 400);
+      }
+    });
+
+    async function fetchInfo(url) {
+      try {
+        const cookies = getStoredCookies();
+        const res = await fetch("/api/info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, cookies })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.title) {
+            $("videoTitle").textContent = data.title;
+            $("videoAuthor").textContent = data.author ? `by ${data.author}` : "";
+            if (data.thumbnail) $("videoThumb").src = data.thumbnail;
+            $("formatBadge").textContent = $("format").value.toUpperCase();
+            $("videoInfoCard").classList.remove("hidden");
+          }
+        }
+      } catch {}
+    }
+
+    // Download form submit
+    $("downloadForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      $("downloadResult").classList.add("hidden");
+      
+      const btn = $("downloadBtn");
+      const status = $("downloadStatus");
+      const url = $("url").value.trim();
+      const format = $("format").value;
+      const quality = $("quality").value;
+      const cookies = getStoredCookies();
+
+      btn.disabled = true;
+      btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing stream...`;
+      showMsg(status, "Analyzing video and preparing high-speed download...");
+
+      try {
+        // Step 1: Info fetch
+        await fetchInfo(url);
+
+        // Step 2: Download
+        showMsg(status, `Extracting and transcoding ${format.toUpperCase()} (${quality}). Please wait...`);
+        
+        const r = await fetch("/api/download", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, format, quality, cookies })
+        });
+
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || "Failed to download media");
+
+        $("resultTitle").textContent = $("videoTitle").textContent || data.filename;
+        $("resultType").textContent = `Format: ${format.toUpperCase()} • Ready for download`;
+        $("downloadLink").href = data.downloadUrl;
+        $("downloadLink").download = data.filename;
+        
+        $("downloadResult").classList.remove("hidden");
+        showMsg(status, "🎉 Download prepared successfully!");
+      } catch (err) {
+        let msg = escapeHtml(err.message);
+        if (msg.includes("bot verification") || msg.includes("Cookie")) {
+          msg += ` <br><button onclick="$('openSettingsBtn').click()" class="mt-2 inline-block bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-rose-700">Open Cookie Settings</button>`;
+        }
+        showMsg(status, msg, true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg><span>Start Download</span>`;
+      }
+    });
+
+    // Media Cutter Form Submit
+    $("cutForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      $("cutResult").classList.add("hidden");
+
+      const btn = $("cutBtn");
+      const status = $("cutStatus");
+      btn.disabled = true;
+      btn.textContent = "Trimming Media...";
+      showMsg(status, "Uploading and trimming segment with FFmpeg...");
+
+      try {
+        const fd = new FormData(e.target);
+        const r = await fetch("/api/cut", { method: "POST", body: fd });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error || "Failed to cut media");
+
+        $("cutLink").href = data.downloadUrl;
+        $("cutLink").download = data.filename;
+        $("cutResult").classList.remove("hidden");
+        showMsg(status, "Trim completed successfully!");
+      } catch (err) {
+        showMsg(status, escapeHtml(err.message), true);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Trim & Process Media";
+      }
+    });
+  </script>
+</body>
+</html>
