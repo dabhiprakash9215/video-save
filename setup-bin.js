@@ -46,19 +46,34 @@ function testBinary(binPath) {
   }
 }
 
-function downloadFile(url, destPath) {
+function downloadFile(url, destPath, maxRedirects = 5) {
   return new Promise((resolve, reject) => {
+    if (maxRedirects <= 0) {
+      return reject(new Error("Too many redirects while downloading yt-dlp"));
+    }
+
     const client = url.startsWith("https") ? https : http;
-    const request = client.get(url, (res) => {
+    const req = client.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
+      },
+      timeout: 45000
+    }, (res) => {
       if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
-        return downloadFile(res.headers.location, destPath).then(resolve).catch(reject);
+        res.resume();
+        return downloadFile(res.headers.location, destPath, maxRedirects - 1)
+          .then(resolve)
+          .catch(reject);
       }
+
       if (res.statusCode !== 200) {
+        res.resume();
         return reject(new Error(`Failed to download yt-dlp: HTTP ${res.statusCode}`));
       }
 
       const fileStream = fs.createWriteStream(destPath);
       res.pipe(fileStream);
+
       fileStream.on("finish", () => {
         fileStream.close(() => {
           if (!IS_WIN) {
@@ -71,13 +86,20 @@ function downloadFile(url, destPath) {
           resolve(destPath);
         });
       });
+
       fileStream.on("error", (err) => {
         try { fs.unlinkSync(destPath); } catch {}
         reject(err);
       });
     });
 
-    request.on("error", (err) => {
+    req.on("timeout", () => {
+      req.destroy();
+      try { fs.unlinkSync(destPath); } catch {}
+      reject(new Error("Download timed out"));
+    });
+
+    req.on("error", (err) => {
       try { fs.unlinkSync(destPath); } catch {}
       reject(err);
     });

@@ -373,20 +373,22 @@ function friendlyError(e) {
   return m.slice(-800);
 }
 
-// Ensure binary is initialized on boot
-getYtDlp().then((p) => {
-  console.log(`[VidsSave] yt-dlp initialized at: ${p}`);
-}).catch((err) => {
-  console.warn(`[VidsSave] Warning during initial yt-dlp check:`, err.message);
-});
+// Only start standalone HTTP server if not in Vercel Serverless environment
+if (!process.env.VERCEL) {
+  getYtDlp().then((p) => {
+    console.log(`[VidsSave] yt-dlp initialized at: ${p}`);
+  }).catch((err) => {
+    console.warn(`[VidsSave] Warning during initial yt-dlp check:`, err.message);
+  });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log("");
-  console.log("====================================");
-  console.log("  VidsSave is running successfully");
-  console.log(`  Port: ${PORT}`);
-  console.log(`  Local URL: http://localhost:${PORT}`);
-  console.log("====================================");
-});
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log("");
+    console.log("====================================");
+    console.log("  VidsSave is running successfully");
+    console.log(`  Port: ${PORT}`);
+    console.log(`  Local URL: http://localhost:${PORT}`);
+    console.log("====================================");
+  });
+}
 
 module.exports = app;
