@@ -28,18 +28,18 @@ try {
   let staticPath = require("ffmpeg-static");
   if (staticPath && fs.existsSync(staticPath)) {
     if (process.platform !== "win32") {
-      try { fs.chmodSync(staticPath, 0o755); } catch {}
+      try { fs.chmodSync(staticPath, 0o755); } catch { }
     }
     ffmpegPath = staticPath;
   }
-} catch {}
+} catch { }
 
 if (!ffmpegPath || !fs.existsSync(ffmpegPath)) {
   try {
     const cmd = process.platform === "win32" ? "where ffmpeg" : "which ffmpeg";
     const out = execSync(cmd, { stdio: ["pipe", "pipe", "ignore"], encoding: "utf8" }).trim();
     if (out) ffmpegPath = out.split(/\r?\n/)[0].trim();
-  } catch {}
+  } catch { }
 }
 
 let activeYtDlpPath = null;
@@ -60,7 +60,27 @@ const upload = multer({
 app.use(express.json({ limit: "5mb" }));
 app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.use(express.static(path.join(ROOT, "public")));
-app.use("/downloads", express.static(DOWNLOADS));
+
+// Deliver download file and auto-delete from temp storage after delivery
+app.get("/downloads/:filename", (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const filePath = path.join(DOWNLOADS, filename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: "File not found or download link expired." });
+  }
+
+  res.download(filePath, filename, (err) => {
+    // Delete temporary file after client receives it
+    setTimeout(() => {
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch { }
+    }, 2000);
+  });
+});
 
 function youtubeUrlOk(value) {
   try {
@@ -88,7 +108,7 @@ function resolveCookieFile(customCookieText) {
       const cookieFilePath = path.join(DOWNLOADS, cookieFileName);
       fs.writeFileSync(cookieFilePath, customCookieText.trim(), "utf8");
       return { path: cookieFilePath, temporary: true };
-    } catch {}
+    } catch { }
   }
 
   // 2. Custom file env
@@ -109,12 +129,12 @@ function resolveCookieFile(customCookieText) {
           if (decoded.includes("youtube.com") || decoded.includes(".google.com")) {
             content = decoded;
           }
-        } catch {}
+        } catch { }
       }
       const cookieFilePath = path.join(DOWNLOADS, "env_cookies.txt");
       fs.writeFileSync(cookieFilePath, content, "utf8");
       return { path: cookieFilePath, temporary: false };
-    } catch {}
+    } catch { }
   }
 
   // 4. File in root or bin
@@ -178,10 +198,17 @@ function run(command, args) {
 
 // Background cleanup routine to prevent disk space from filling up
 function cleanOldFiles() {
-  const maxAgeMs = 30 * 60 * 1000; // 30 minutes
+  const maxAgeMs = 5 * 60 * 1000; // 5 minutes
   const now = Date.now();
 
-  [DOWNLOADS, UPLOADS].forEach((dir) => {
+  const dirsToClean = [
+    DOWNLOADS,
+    UPLOADS,
+    path.join(ROOT, "downloads"),
+    path.join(ROOT, "uploads")
+  ];
+
+  dirsToClean.forEach((dir) => {
     try {
       if (!fs.existsSync(dir)) return;
       const files = fs.readdirSync(dir);
@@ -193,14 +220,14 @@ function cleanOldFiles() {
           if (stats.isFile() && (now - stats.mtimeMs) > maxAgeMs) {
             fs.unlinkSync(filePath);
           }
-        } catch {}
+        } catch { }
       }
-    } catch {}
+    } catch { }
   });
 }
 
-// Run cleanup every 10 minutes
-setInterval(cleanOldFiles, 10 * 60 * 1000);
+// Run cleanup every 2 minutes
+setInterval(cleanOldFiles, 2 * 60 * 1000);
 
 // Health check endpoint
 app.get("/api/health", async (req, res) => {
@@ -258,7 +285,7 @@ app.post("/api/info", async (req, res) => {
         duration: 0
       });
     }
-  } catch {}
+  } catch { }
 
   // 2. Fallback to yt-dlp metadata
   const cookieInfo = resolveCookieFile(userCookies);
@@ -295,7 +322,7 @@ app.post("/api/info", async (req, res) => {
     res.status(500).json({ error: friendlyError(e) });
   } finally {
     if (cookieInfo && cookieInfo.temporary && fs.existsSync(cookieInfo.path)) {
-      try { fs.unlinkSync(cookieInfo.path); } catch {}
+      try { fs.unlinkSync(cookieInfo.path); } catch { }
     }
   }
 });
@@ -440,7 +467,7 @@ app.post("/api/download", async (req, res) => {
           lastError = err;
           const errMsg = String(err.message || "");
           if (/bot|403|Forbidden|Sign in/i.test(errMsg)) {
-            break; // Try next client group
+            break;
           }
         }
       }
@@ -469,7 +496,7 @@ app.post("/api/download", async (req, res) => {
     res.status(500).json({ error: friendlyError(e) });
   } finally {
     if (cookieInfo && cookieInfo.temporary && fs.existsSync(cookieInfo.path)) {
-      try { fs.unlinkSync(cookieInfo.path); } catch {}
+      try { fs.unlinkSync(cookieInfo.path); } catch { }
     }
   }
 });
@@ -516,8 +543,8 @@ app.post("/api/cut", upload.single("media"), async (req, res) => {
       throw new Error("Cut file was not created.");
     }
 
-    try { fs.unlinkSync(inputPath); } catch {}
-    
+    try { fs.unlinkSync(inputPath); } catch { }
+
     res.json({
       ok: true,
       filename: path.basename(outputPath),
@@ -525,10 +552,10 @@ app.post("/api/cut", upload.single("media"), async (req, res) => {
     });
   } catch (e) {
     if (inputPath && fs.existsSync(inputPath)) {
-      try { fs.unlinkSync(inputPath); } catch {}
+      try { fs.unlinkSync(inputPath); } catch { }
     }
     if (outputPath && fs.existsSync(outputPath)) {
-      try { fs.unlinkSync(outputPath); } catch {}
+      try { fs.unlinkSync(outputPath); } catch { }
     }
     res.status(500).json({ error: friendlyError(e) });
   }
