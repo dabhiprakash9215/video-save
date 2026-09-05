@@ -6,9 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "build": "node setup-binaries.js",
-    "postinstall": "node setup-binaries.js"
+    "dev": "node server.js"
   },
   "engines": {
     "node": ">=18"

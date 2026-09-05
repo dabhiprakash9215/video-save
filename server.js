@@ -3,9 +3,6 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const https = require("https");
-const http = require("http");
-const querystring = require("querystring");
 const { spawn } = require("child_process");
 
 const app = express();
@@ -13,9 +10,11 @@ const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 const DOWNLOADS = path.join(ROOT, "downloads");
 const UPLOADS = path.join(ROOT, "uploads");
+const YTDLP = path.join(ROOT, "bin", process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp");
 
 fs.mkdirSync(DOWNLOADS, { recursive: true });
 fs.mkdirSync(UPLOADS, { recursive: true });
+fs.mkdirSync(path.dirname(YTDLP), { recursive: true });
 
 const ffmpeg = require("ffmpeg-static");
 const upload = multer({
@@ -27,166 +26,118 @@ app.use(express.json({ limit: "2mb" }));
 app.use(express.static(path.join(ROOT, "public")));
 app.use("/downloads", express.static(DOWNLOADS));
 
-// ----------------------------------------------------
-// VidsSave Official Parser API
-// ----------------------------------------------------
-const VIDSSAVE_API_URL = "https://api.vidssave.com/api/contentsite_api/media/parse";
-const VIDSSAVE_AUTH = "20250901majwlqo";
-const VIDSSAVE_DOMAIN = "api-ak.vidssave.com";
-const VIDSSAVE_ORIGIN = "cache";
-
-function parseMediaApi(videoUrl) {
-  return new Promise((resolve, reject) => {
-    const postData = querystring.stringify({
-      auth: VIDSSAVE_AUTH,
-      domain: VIDSSAVE_DOMAIN,
-      origin: VIDSSAVE_ORIGIN,
-      link: videoUrl.trim()
-    });
-
-    const req = https.request(VIDSSAVE_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Content-Length": Buffer.byteLength(postData),
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/plain, */*"
-      },
-      timeout: 20000
-    }, (res) => {
-      let data = "";
-      res.on("data", chunk => data += chunk);
-      res.on("end", () => {
-        try {
-          const json = JSON.parse(data);
-          if (json && (json.status === 1 || json.status_code === "success") && json.data) {
-            resolve(json.data);
-          } else {
-            reject(new Error(json.msg || json.message || "Unable to extract video information from link."));
-          }
-        } catch (err) {
-          reject(new Error("Invalid response received from parser API: " + err.message));
-        }
-      });
-    });
-
-    req.on("error", (err) => reject(new Error("Network error connecting to media API: " + err.message)));
-    req.on("timeout", () => {
-      req.destroy();
-      reject(new Error("Media parse request timed out. Please try again."));
-    });
-
-    req.write(postData);
-    req.end();
-  });
-}
-
 function youtubeUrlOk(value) {
   try {
-    const u = new URL(String(value).trim());
+    const u = new URL(value);
     const h = u.hostname.toLowerCase();
-    return ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "www.youtu.be"].includes(h);
-  } catch {
-    return false;
-  }
+    return ["youtube.com","www.youtube.com","m.youtube.com","youtu.be","www.youtu.be"].includes(h);
+  } catch { return false; }
 }
 
-app.get("/api/health", (req, res) => {
+function run(command, args) {
+  return new Promise((resolve, reject) => {
+    const p = spawn(command, args, { windowsHide: true });
+    let out = "", err = "";
+    p.stdout.on("data", d => out += d.toString());
+    p.stderr.on("data", d => err += d.toString());
+    p.on("error", reject);
+    p.on("close", code => {
+      if (code === 0) resolve({ out, err });
+      else reject(new Error(err || `Process exited with code ${code}`));
+    });
+  });
+}
+
+function safeExt(format) { return format === "mp3" ? "mp3" : "mp4"; }
+
+app.get("/api/health", (req,res) => {
   res.json({
     ok: true,
-    apiEndpoint: VIDSSAVE_API_URL,
-    ffmpeg: !!ffmpeg,
-    platform: process.platform
+    ytDlp: fs.existsSync(YTDLP),
+    ffmpeg: !!ffmpeg
   });
 });
 
-// 1. Video Metadata & Formats List
-app.post("/api/info", async (req, res) => {
+app.post("/api/info", async (req,res) => {
   try {
     const { url } = req.body || {};
-    if (!url || !youtubeUrlOk(url)) {
-      return res.status(400).json({ error: "Please enter a valid YouTube video URL." });
-    }
+    if (!youtubeUrlOk(url)) return res.status(400).json({ error: "Enter a valid YouTube URL." });
 
-    const data = await parseMediaApi(url);
-
+    const r = await run(YTDLP, [
+      "--no-playlist",
+      "--dump-single-json",
+      "--skip-download",
+      "--no-warnings",
+      url
+    ]);
+    const data = JSON.parse(r.out);
     res.json({
       ok: true,
-      id: data.id || "",
-      title: data.title || "YouTube Video",
+      title: data.title || "YouTube video",
       duration: data.duration || 0,
-      thumbnail: data.thumbnail || "",
-      resources: data.resources || []
+      thumbnail: data.thumbnail || ""
     });
   } catch (e) {
-    console.error("[/api/info error]", e.message);
-    res.status(500).json({ error: e.message || "Failed to parse media" });
+    res.status(500).json({ error: friendlyError(e) });
   }
 });
 
-// 2. Direct Media Download Generation
-app.post("/api/download", async (req, res) => {
+app.post("/api/download", async (req,res) => {
   try {
-    const { url, format, resource_id } = req.body || {};
-    if (!url || !youtubeUrlOk(url)) {
-      return res.status(400).json({ error: "Please enter a valid YouTube video URL." });
+    const { url, format } = req.body || {};
+    if (!youtubeUrlOk(url)) return res.status(400).json({ error: "Enter a valid YouTube URL." });
+    if (!["mp3","mp4"].includes(format)) return res.status(400).json({ error: "Choose MP3 or MP4." });
+    if (!fs.existsSync(YTDLP)) return res.status(500).json({ error: "yt-dlp is missing. Run START.bat once." });
+    if (!ffmpeg) return res.status(500).json({ error: "FFmpeg is missing. Run npm install again." });
+
+    const id = crypto.randomBytes(10).toString("hex");
+    const titleTemplate = path.join(DOWNLOADS, `${id}.%(ext)s`);
+
+    let args;
+    if (format === "mp3") {
+      args = [
+        "--no-playlist",
+        "--no-warnings",
+        "--restrict-filenames",
+        "--ffmpeg-location", ffmpeg,
+        "-x",
+        "--audio-format", "mp3",
+        "--audio-quality", "192K",
+        "-o", titleTemplate,
+        url
+      ];
+    } else {
+      args = [
+        "--no-playlist",
+        "--no-warnings",
+        "--restrict-filenames",
+        "--ffmpeg-location", ffmpeg,
+        "-f", "bv*+ba/b",
+        "--merge-output-format", "mp4",
+        "-o", titleTemplate,
+        url
+      ];
     }
 
-    const data = await parseMediaApi(url);
-    const resources = data.resources || [];
+    await run(YTDLP, args);
 
-    if (!resources.length) {
-      return res.status(404).json({ error: "No download streams found for this video." });
-    }
+    const files = fs.readdirSync(DOWNLOADS)
+      .filter(f => f.startsWith(id + ".") && !f.endsWith(".part"));
 
-    let selected = null;
-
-    // If specific resource_id is requested
-    if (resource_id) {
-      selected = resources.find(r => r.resource_id === resource_id);
-    }
-
-    // Otherwise find best match based on format (MP4 or MP3)
-    if (!selected) {
-      if (format === "mp3") {
-        selected = resources.find(r => r.format === "MP3")
-          || resources.find(r => r.type === "audio")
-          || resources[0];
-      } else {
-        const mp4Videos = resources.filter(r => r.format === "MP4" && r.type === "video");
-        selected = mp4Videos.find(r => r.quality === "720P")
-          || mp4Videos.find(r => r.quality === "1080P")
-          || mp4Videos.find(r => r.quality === "480P")
-          || mp4Videos.find(r => r.quality === "360P")
-          || mp4Videos[0]
-          || resources[0];
-      }
-    }
-
-    if (!selected || !selected.download_url) {
-      return res.status(404).json({ error: "Selected download link is not available." });
-    }
-
-    const safeTitle = (data.title || "video").replace(/[^\w\s.-]/g, "_").slice(0, 80);
-    const ext = (selected.format || format || "mp4").toLowerCase();
-    const filename = `${safeTitle}.${ext}`;
+    if (!files.length) throw new Error("The file was not created.");
+    const filename = files[0];
 
     res.json({
-      ok: true,
-      title: data.title,
-      quality: selected.quality,
-      format: selected.format,
+      ok:true,
       filename,
-      downloadUrl: selected.download_url
+      downloadUrl:`/downloads/${encodeURIComponent(filename)}`
     });
-  } catch (e) {
-    console.error("[/api/download error]", e.message);
-    res.status(500).json({ error: e.message || "Failed to generate download link" });
+  } catch(e) {
+    res.status(500).json({ error: friendlyError(e) });
   }
 });
 
-// 3. Local Media Cutter
-app.post("/api/cut", upload.single("media"), async (req, res) => {
+app.post("/api/cut", upload.single("media"), async (req,res) => {
   let inputPath = null, outputPath = null;
   try {
     if (!req.file) return res.status(400).json({ error: "Choose an MP3 or MP4 file." });
@@ -199,7 +150,7 @@ app.post("/api/cut", upload.single("media"), async (req, res) => {
 
     inputPath = req.file.path;
     const ext = path.extname(req.file.originalname).toLowerCase() || ".mp4";
-    const outExt = [".mp3", ".wav"].includes(ext) ? ext : ".mp4";
+    const outExt = [".mp3",".wav"].includes(ext) ? ext : ".mp4";
     const id = crypto.randomBytes(10).toString("hex");
     outputPath = path.join(DOWNLOADS, `${id}${outExt}`);
 
@@ -217,31 +168,20 @@ app.post("/api/cut", upload.single("media"), async (req, res) => {
     }
 
     args.push(outputPath);
-
-    await new Promise((resolve, reject) => {
-      const p = spawn(ffmpeg, args, { windowsHide: true });
-      let err = "";
-      p.stderr.on("data", d => err += d.toString());
-      p.on("error", reject);
-      p.on("close", code => {
-        if (code === 0) resolve();
-        else reject(new Error(err || `FFmpeg exited with code ${code}`));
-      });
-    });
+    await run(ffmpeg, args);
 
     if (!fs.existsSync(outputPath)) throw new Error("Cut file was not created.");
 
-    try { fs.unlinkSync(inputPath); } catch {}
+    fs.unlinkSync(inputPath);
     res.json({
-      ok: true,
-      filename: path.basename(outputPath),
-      downloadUrl: `/downloads/${encodeURIComponent(path.basename(outputPath))}`
+      ok:true,
+      filename:path.basename(outputPath),
+      downloadUrl:`/downloads/${encodeURIComponent(path.basename(outputPath))}`
     });
-  } catch (e) {
+  } catch(e) {
     if (inputPath && fs.existsSync(inputPath)) { try { fs.unlinkSync(inputPath); } catch {} }
     if (outputPath && fs.existsSync(outputPath)) { try { fs.unlinkSync(outputPath); } catch {} }
-    console.error("[/api/cut error]", e);
-    res.status(500).json({ error: e.message || "FFmpeg cutting failed" });
+    res.status(500).json({ error: friendlyError(e) });
   }
 });
 
@@ -251,34 +191,25 @@ function parseTime(v) {
   if (/^\d+(\.\d+)?$/.test(s)) return Number(s);
   const parts = s.split(":").map(Number);
   if (parts.some(Number.isNaN) || parts.length > 3) return NaN;
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0]*60 + parts[1];
+  if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
   return NaN;
 }
 
-// Auto-delete temporary cutter files older than 10 minutes
-setInterval(() => {
-  const cleanDirectory = (dir) => {
-    try {
-      if (!fs.existsSync(dir)) return;
-      const now = Date.now();
-      const files = fs.readdirSync(dir);
-      for (const file of files) {
-        const filePath = path.join(dir, file);
-        const stats = fs.statSync(filePath);
-        if (now - stats.mtimeMs > 10 * 60 * 1000) {
-          try { fs.unlinkSync(filePath); } catch {}
-        }
-      }
-    } catch (err) {}
-  };
-  cleanDirectory(DOWNLOADS);
-  cleanDirectory(UPLOADS);
-}, 5 * 60 * 1000);
+function friendlyError(e) {
+  const m = String(e.message || e);
+  if (/Sign in to confirm|bot|cookies/i.test(m)) {
+    return "YouTube is asking for verification. Try another public video or use an authorized cookies setup.";
+  }
+  if (/ffmpeg/i.test(m)) return "FFmpeg error. Please run START.bat again so dependencies are installed.";
+  if (/yt-dlp/i.test(m)) return "yt-dlp error. Run START.bat again to update/download yt-dlp.";
+  return m.slice(-1800);
+}
 
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, () => {
+  console.log("");
   console.log("====================================");
-  console.log(" VidsSave API Backend is running");
-  console.log(` http://0.0.0.0:${PORT}`);
+  console.log(" VidsSave is running");
+  console.log(` http://localhost:${PORT}`);
   console.log("====================================");
 });
