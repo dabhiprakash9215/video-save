@@ -88,12 +88,33 @@ btn.disabled=true;btn.textContent="Processing...";msg(status,"Getting video info
 try{
 const infoRes=await fetch("/api/info",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});
 const info=await infoRes.json(); if(!infoRes.ok) throw new Error(info.error);
-$("info").classList.remove("hidden");$("info").innerHTML="<b>"+escapeHtml(info.title)+"</b>";
+$("info").classList.remove("hidden");
+$("info").innerHTML = `
+  <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+    ${info.thumbnail ? `<img src="${escapeHtml(info.thumbnail)}" alt="Thumbnail" class="w-28 sm:w-36 rounded-lg object-cover shadow border">` : ''}
+    <div>
+      <h3 class="font-bold text-gray-900 text-base sm:text-lg">${escapeHtml(info.title)}</h3>
+      ${info.author_name ? `<p class="text-sm text-gray-500 mt-1">Channel: <span class="font-semibold text-gray-700">${escapeHtml(info.author_name)}</span></p>` : ''}
+    </div>
+  </div>
+`;
 msg(status,"Downloading and converting. Please wait...");
-const r=await fetch("/api/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,format})});
-const data=await r.json(); if(!r.ok) throw new Error(data.error);
-$("downloadTitle").textContent=info.title||"File ready";$("downloadType").textContent="Format: "+format.toUpperCase();
-$("downloadLink").href=data.downloadUrl;$("downloadLink").download=data.filename;$("downloadResult").classList.remove("hidden");
+const r = await fetch("/api/download", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    url,
+    format
+  })
+});
+const data = await r.json();
+if (!r.ok) throw new Error(data.error);
+
+$("downloadTitle").textContent = data.filename || info.title || "File ready";
+$("downloadType").textContent = "Format: " + format.toUpperCase();
+$("downloadLink").href = data.downloadUrl;
+$("downloadLink").download = data.filename || `download.${format}`;
+$("downloadResult").classList.remove("hidden");
 msg(status,"Completed successfully.");
 }catch(err){msg(status,err.message,true)}finally{btn.disabled=false;btn.textContent="Download"}
 });

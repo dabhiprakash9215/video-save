@@ -5,6 +5,8 @@ const path = require("path");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
 
+const YTDlpWrap = require("yt-dlp-wrap").default || require("yt-dlp-wrap");
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
@@ -16,6 +18,7 @@ fs.mkdirSync(DOWNLOADS, { recursive: true });
 fs.mkdirSync(UPLOADS, { recursive: true });
 fs.mkdirSync(path.dirname(YTDLP), { recursive: true });
 
+const ytdlp = new YTDlpWrap(YTDLP);
 const ffmpeg = require("ffmpeg-static");
 const upload = multer({
   dest: UPLOADS,
@@ -58,40 +61,58 @@ app.get("/api/health", (req,res) => {
   });
 });
 
-app.post("/api/info", async (req,res) => {
+app.all("/api/info", async (req, res) => {
   try {
-    const { url } = req.body || {};
-    if (!youtubeUrlOk(url)) return res.status(400).json({ error: "Enter a valid YouTube URL." });
+    const url = req.body?.url || req.query?.url;
+    if (!url || !youtubeUrlOk(url)) return res.status(400).json({ error: "Enter a valid YouTube URL." });
 
-    const r = await run(YTDLP, [
-      "--no-playlist",
-      "--dump-single-json",
-      "--skip-download",
-      "--no-warnings",
-      url
-    ]);
-    const data = JSON.parse(r.out);
+    const oembedUrl = `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`;
+    const response = await fetch(oembedUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 404 || response.status === 400) {
+        return res.status(400).json({ error: "Video not found or is private/unavailable." });
+      }
+      throw new Error(`YouTube oEmbed returned status ${response.status}`);
+    }
+
+    const data = await response.json();
     res.json({
       ok: true,
       title: data.title || "YouTube video",
-      duration: data.duration || 0,
-      thumbnail: data.thumbnail || ""
+      author_name: data.author_name || "",
+      author_url: data.author_url || "",
+      thumbnail: data.thumbnail_url || "",
+      thumbnail_url: data.thumbnail_url || "",
+      html: data.html || "",
+      provider_name: data.provider_name || "YouTube"
     });
   } catch (e) {
     res.status(500).json({ error: friendlyError(e) });
   }
 });
 
-app.post("/api/download", async (req,res) => {
+app.post("/api/download", async (req, res) => {
   try {
-    const { url, format } = req.body || {};
+    const { url, format = "mp4" } = req.body || {};
     if (!youtubeUrlOk(url)) return res.status(400).json({ error: "Enter a valid YouTube URL." });
-    if (!["mp3","mp4"].includes(format)) return res.status(400).json({ error: "Choose MP3 or MP4." });
+    if (!["mp3", "mp4"].includes(format)) return res.status(400).json({ error: "Choose MP3 or MP4." });
+
     if (!fs.existsSync(YTDLP)) return res.status(500).json({ error: "yt-dlp is missing. Run START.bat once." });
     if (!ffmpeg) return res.status(500).json({ error: "FFmpeg is missing. Run npm install again." });
 
     const id = crypto.randomBytes(10).toString("hex");
     const titleTemplate = path.join(DOWNLOADS, `${id}.%(ext)s`);
+
+    const extraArgs = [
+      "--extractor-args", "youtube:player_client=android,ios,mweb",
+      "--no-check-certificates",
+      "--geo-bypass"
+    ];
 
     let args;
     if (format === "mp3") {
@@ -99,6 +120,7 @@ app.post("/api/download", async (req,res) => {
         "--no-playlist",
         "--no-warnings",
         "--restrict-filenames",
+        ...extraArgs,
         "--ffmpeg-location", ffmpeg,
         "-x",
         "--audio-format", "mp3",
@@ -111,15 +133,16 @@ app.post("/api/download", async (req,res) => {
         "--no-playlist",
         "--no-warnings",
         "--restrict-filenames",
+        ...extraArgs,
         "--ffmpeg-location", ffmpeg,
-        "-f", "bv*+ba/b",
+        "-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/b",
         "--merge-output-format", "mp4",
         "-o", titleTemplate,
         url
       ];
     }
 
-    await run(YTDLP, args);
+    await ytdlp.execPromise(args);
 
     const files = fs.readdirSync(DOWNLOADS)
       .filter(f => f.startsWith(id + ".") && !f.endsWith(".part"));
@@ -128,11 +151,11 @@ app.post("/api/download", async (req,res) => {
     const filename = files[0];
 
     res.json({
-      ok:true,
+      ok: true,
       filename,
-      downloadUrl:`/downloads/${encodeURIComponent(filename)}`
+      downloadUrl: `/downloads/${encodeURIComponent(filename)}`
     });
-  } catch(e) {
+  } catch (e) {
     res.status(500).json({ error: friendlyError(e) });
   }
 });
