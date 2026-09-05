@@ -38,12 +38,27 @@ app.use("/downloads", express.static(DOWNLOADS));
 
 function youtubeUrlOk(value) {
   try {
-    const u = new URL(value);
+    const u = new URL(String(value).trim());
     const h = u.hostname.toLowerCase();
     return ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "www.youtu.be"].includes(h);
   } catch {
     return false;
   }
+}
+
+function cleanYoutubeUrl(value) {
+  try {
+    const u = new URL(String(value).trim());
+    if (u.hostname.includes("youtu.be")) {
+      const vid = u.pathname.replace(/^\//, "").split("?")[0].split("&")[0];
+      if (vid) return `https://www.youtube.com/watch?v=${vid}`;
+    }
+    if (u.hostname.includes("youtube.com")) {
+      const vid = u.searchParams.get("v");
+      if (vid) return `https://www.youtube.com/watch?v=${vid}`;
+    }
+  } catch {}
+  return String(value).trim();
 }
 
 function downloadBinary(url, dest, redirects = 0) {
@@ -87,7 +102,7 @@ async function getOrInitYtDlp() {
   ensureDirectories();
   const isWin = process.platform === "win32";
 
-  // 1. Check if bin file exists and is valid
+  // 1. Check if bin file exists and is valid (> 1MB)
   if (fs.existsSync(YTDLP)) {
     try {
       const stats = fs.statSync(YTDLP);
@@ -146,6 +161,42 @@ function run(command, args) {
   });
 }
 
+// Helper to run yt-dlp with automatic player_client rotation to bypass datacenter blocks
+async function runYtDlp(bin, baseArgs, targetUrl) {
+  const clientProfiles = [
+    ["--extractor-args", "youtube:player_client=android,web"],
+    ["--extractor-args", "youtube:player_client=ios,mweb"],
+    ["--extractor-args", "youtube:player_client=web,mweb,android,ios"],
+    [] // default fallback
+  ];
+
+  let lastError = null;
+  for (const clientArgs of clientProfiles) {
+    try {
+      const fullArgs = [
+        "--no-playlist",
+        "--no-warnings",
+        "--no-check-certificates",
+        "--geo-bypass",
+        "--user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        ...clientArgs,
+        ...baseArgs,
+        targetUrl
+      ];
+      return await run(bin, fullArgs);
+    } catch (err) {
+      lastError = err;
+      const msg = String(err.message || err);
+      // If error is specific to player response extraction, try next profile
+      if (/player response|extract|bot|sign in/i.test(msg)) {
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastError;
+}
+
 app.get("/api/health", async (req, res) => {
   let ytOk = false;
   try {
@@ -165,14 +216,14 @@ app.post("/api/info", async (req, res) => {
     const { url } = req.body || {};
     if (!youtubeUrlOk(url)) return res.status(400).json({ error: "Enter a valid YouTube URL." });
 
+    const cleanUrl = cleanYoutubeUrl(url);
     const bin = await getOrInitYtDlp();
-    const r = await run(bin, [
-      "--no-playlist",
+
+    const r = await runYtDlp(bin, [
       "--dump-single-json",
-      "--skip-download",
-      "--no-warnings",
-      url
-    ]);
+      "--skip-download"
+    ], cleanUrl);
+
     const data = JSON.parse(r.out);
     res.json({
       ok: true,
@@ -193,39 +244,34 @@ app.post("/api/download", async (req, res) => {
     if (!youtubeUrlOk(url)) return res.status(400).json({ error: "Enter a valid YouTube URL." });
     if (!["mp3", "mp4"].includes(format)) return res.status(400).json({ error: "Choose MP3 or MP4." });
 
+    const cleanUrl = cleanYoutubeUrl(url);
     const bin = await getOrInitYtDlp();
     if (!ffmpeg) return res.status(500).json({ error: "FFmpeg is missing. Please restart the service." });
 
     const id = crypto.randomBytes(10).toString("hex");
     const titleTemplate = path.join(DOWNLOADS, `${id}.%(ext)s`);
 
-    let args;
+    let formatArgs;
     if (format === "mp3") {
-      args = [
-        "--no-playlist",
-        "--no-warnings",
+      formatArgs = [
         "--restrict-filenames",
         "--ffmpeg-location", ffmpeg,
         "-x",
         "--audio-format", "mp3",
         "--audio-quality", "192K",
-        "-o", titleTemplate,
-        url
+        "-o", titleTemplate
       ];
     } else {
-      args = [
-        "--no-playlist",
-        "--no-warnings",
+      formatArgs = [
         "--restrict-filenames",
         "--ffmpeg-location", ffmpeg,
         "-f", "bv*+ba/b",
         "--merge-output-format", "mp4",
-        "-o", titleTemplate,
-        url
+        "-o", titleTemplate
       ];
     }
 
-    await run(bin, args);
+    await runYtDlp(bin, formatArgs, cleanUrl);
 
     const files = fs.readdirSync(DOWNLOADS)
       .filter(f => f.startsWith(id + ".") && !f.endsWith(".part"));
