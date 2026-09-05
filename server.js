@@ -206,10 +206,31 @@ function friendlyError(e) {
   return m.slice(-1800);
 }
 
-app.listen(PORT, () => {
+// Auto-delete temporary files older than 10 minutes to save disk space
+setInterval(() => {
+  const cleanDirectory = (dir) => {
+    try {
+      if (!fs.existsSync(dir)) return;
+      const now = Date.now();
+      const files = fs.readdirSync(dir);
+      for (const file of files) {
+        const filePath = path.join(dir, file);
+        const stats = fs.statSync(filePath);
+        if (now - stats.mtimeMs > 10 * 60 * 1000) {
+          fs.unlinkSync(filePath);
+        }
+      }
+    } catch (err) {}
+  };
+  cleanDirectory(DOWNLOADS);
+  cleanDirectory(UPLOADS);
+}, 5 * 60 * 1000);
+
+app.listen(PORT, "0.0.0.0", () => {
   console.log("");
   console.log("====================================");
   console.log(" VidsSave is running");
-  console.log(` http://localhost:${PORT}`);
+  console.log(` http://0.0.0.0:${PORT}`);
   console.log("====================================");
 });
+

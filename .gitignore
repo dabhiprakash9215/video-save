@@ -1,4 +1,7 @@
 node_modules/
 downloads/*
+!downloads/.gitkeep
 uploads/*
-bin/yt-dlp.exe
+!uploads/.gitkeep
+bin/yt-dlp*
+.env
