@@ -1,504 +1,113 @@
 <!doctype html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>VidsSave - High Speed YouTube Downloader & Media Cutter</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              50: '#f5f3ff',
-              100: '#ede9fe',
-              500: '#8b5cf6',
-              600: '#7c3aed',
-              700: '#6d28d9',
-              900: '#4c1d95',
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    .gradient-text {
-      background: linear-gradient(135deg, #7c3aed 0%, #ec4899 50%, #f43f5e 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .hero-glow {
-      background: radial-gradient(circle at 50% 20%, rgba(124, 58, 237, 0.12) 0%, rgba(236, 72, 153, 0.05) 50%, transparent 80%);
-    }
-    .glass-card {
-      background: rgba(255, 255, 255, 0.96);
-      backdrop-filter: blur(16px);
-      box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.08), 0 0 1px 1px rgba(0, 0, 0, 0.04);
-    }
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 6px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VidsSave - MP3 MP4 Downloader & Cutter</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+body{font-family:Inter,Arial,sans-serif}
+.gradient{background:linear-gradient(90deg,#7c3aed,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.card{box-shadow:0 20px 60px rgba(0,0,0,.08)}
+</style>
 </head>
-<body class="bg-slate-50 text-slate-900 font-sans min-h-screen flex flex-col selection:bg-purple-500 selection:text-white">
+<body class="bg-white text-gray-900">
+<header class="border-b bg-white sticky top-0 z-10">
+<div class="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
+<a href="#" class="text-2xl font-extrabold">Vids<span class="gradient">Save</span></a>
+<nav class="hidden md:flex gap-7 text-sm font-semibold">
+<a href="#download">Downloader</a><a href="#cutter">Cutter</a><a href="#how">How to Use</a>
+</nav>
+<a href="#download" class="bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm">Get Started</a>
+</div></header>
 
-  <!-- Navigation Header -->
-  <header class="border-b border-slate-200/80 bg-white/90 backdrop-blur-md sticky top-0 z-30 transition-all">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
-      <a href="#" class="flex items-center gap-2 text-2xl font-extrabold tracking-tight">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-purple-600 to-pink-500 flex items-center justify-center text-white shadow-md shadow-purple-500/20">
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </div>
-        <span>Vids<span class="gradient-text">Save</span></span>
-      </a>
+<section class="bg-gradient-to-b from-purple-50 to-white">
+<div class="max-w-5xl mx-auto px-5 py-16 text-center">
+<div class="inline-flex bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm mb-5">⚡ Fast & Easy Media Tool</div>
+<h1 class="text-4xl md:text-6xl font-black">Download & Cut <span class="gradient">MP3 / MP4</span></h1>
+<p class="mt-5 text-gray-600 text-lg max-w-2xl mx-auto">YouTube downloader with MP3/MP4 conversion and a simple local media cutter.</p>
 
-      <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
-        <a href="#download" class="hover:text-purple-600 transition">Downloader</a>
-        <a href="#cutter" class="hover:text-purple-600 transition">Media Cutter</a>
-        <a href="#features" class="hover:text-purple-600 transition">Architecture</a>
-      </nav>
+<div id="download" class="card bg-white rounded-2xl p-4 mt-9 max-w-4xl mx-auto border text-left">
+<h2 class="text-xl font-bold mb-4">YouTube Downloader</h2>
+<form id="downloadForm" class="flex flex-col md:flex-row gap-3">
+<input id="url" type="url" required placeholder="Paste YouTube URL here..." class="flex-1 border rounded-xl px-5 py-4 outline-none focus:ring-2 focus:ring-purple-500">
+<select id="format" class="border rounded-xl px-4 py-4"><option value="mp4">MP4 Video</option><option value="mp3">MP3 Audio</option></select>
+<button id="downloadBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-7 py-4 rounded-xl">Download</button>
+</form>
+<div id="info" class="hidden mt-4 border rounded-xl p-4"></div>
+<div id="downloadStatus" class="hidden mt-4 rounded-xl p-4"></div>
+<div id="downloadResult" class="hidden mt-4 bg-gray-50 rounded-xl p-5">
+<div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+<div><b id="downloadTitle">File ready</b><p id="downloadType" class="text-sm text-gray-500"></p></div>
+<a id="downloadLink" class="bg-green-600 text-white px-5 py-3 rounded-lg" download>Download File</a>
+</div></div>
+</div>
+</div>
+</section>
 
-      <div class="flex items-center gap-3">
-        <div id="backendStatusBadge" class="flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-semibold">
-          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span>Backend Online</span>
-        </div>
-        <a href="#download" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm">Get Started</a>
-      </div>
-    </div>
-  </header>
+<section id="cutter" class="py-16 bg-gray-50">
+<div class="max-w-4xl mx-auto px-5">
+<div class="text-center"><h2 class="text-3xl font-bold">MP3 / MP4 Cutter</h2><p class="text-gray-500 mt-2">Upload a media file and cut the exact part you need.</p></div>
+<div class="bg-white border rounded-2xl p-6 mt-8">
+<form id="cutForm">
+<input id="media" name="media" type="file" accept="audio/*,video/*" required class="w-full border rounded-xl p-4">
+<div class="grid md:grid-cols-2 gap-4 mt-4">
+<div><label class="text-sm font-semibold">Start (seconds or HH:MM:SS)</label><input name="start" value="0" class="mt-2 w-full border rounded-xl px-4 py-3"></div>
+<div><label class="text-sm font-semibold">End (seconds or HH:MM:SS)</label><input name="end" placeholder="60" required class="mt-2 w-full border rounded-xl px-4 py-3"></div>
+</div>
+<button id="cutBtn" class="mt-5 bg-gray-900 text-white px-6 py-3 rounded-xl font-bold">Cut Media</button>
+</form>
+<div id="cutStatus" class="hidden mt-4 rounded-xl p-4"></div>
+<div id="cutResult" class="hidden mt-4 bg-gray-50 rounded-xl p-5">
+<b>Cut file is ready ✅</b><br><a id="cutLink" class="inline-block mt-3 bg-green-600 text-white px-5 py-3 rounded-lg" download>Download Cut File</a>
+</div>
+</div>
+</div>
+</section>
 
-  <!-- Hero & Main Downloader Section -->
-  <main class="flex-1 hero-glow">
-    <section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 text-center">
-      <div class="inline-flex items-center gap-2 bg-purple-50 text-purple-700 border border-purple-200/80 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">
-        <span class="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
-        Dedicated Node.js Media Processor
-      </div>
+<section id="how" class="py-16">
+<div class="max-w-6xl mx-auto px-5">
+<h2 class="text-3xl font-bold text-center">How to Use</h2>
+<div class="grid md:grid-cols-3 gap-7 mt-9">
+<div class="border rounded-xl p-7"><b class="text-3xl">1️⃣</b><h3 class="font-bold text-xl mt-4">Paste URL</h3><p class="text-gray-500 mt-2">Paste a public YouTube URL.</p></div>
+<div class="border rounded-xl p-7"><b class="text-3xl">2️⃣</b><h3 class="font-bold text-xl mt-4">Choose MP3/MP4</h3><p class="text-gray-500 mt-2">Select audio or video format.</p></div>
+<div class="border rounded-xl p-7"><b class="text-3xl">3️⃣</b><h3 class="font-bold text-xl mt-4">Download</h3><p class="text-gray-500 mt-2">Wait for processing and download your file.</p></div>
+</div>
+</div></section>
 
-      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 max-w-3xl mx-auto leading-tight">
-        High-Speed <br class="hidden sm:inline"/><span class="gradient-text">YouTube Media Processor</span>
-      </h1>
-      
-      <p class="mt-4 text-slate-600 text-base sm:text-lg max-w-2xl mx-auto font-normal">
-        Queue and extract high quality MP4 videos or crystal clear 320kbps MP3 audio with asynchronous backend job processing.
-      </p>
+<footer class="bg-gray-900 text-white"><div class="max-w-7xl mx-auto px-5 py-10 text-center"><b class="text-2xl">VidsSave</b><p class="text-gray-400 mt-3">Downloader & media cutter.</p><p class="text-gray-500 text-sm mt-5">Use only content you own or have permission to download.</p></div></footer>
 
-      <!-- Main Downloader Card -->
-      <div id="download" class="glass-card rounded-3xl p-5 sm:p-8 mt-10 max-w-3xl mx-auto border border-slate-200/80 text-left">
-        <form id="downloadForm" class="space-y-4">
-          <div class="flex flex-col sm:flex-row gap-3">
-            <div class="relative flex-1">
-              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-              </div>
-              <input id="url" type="url" required placeholder="Paste YouTube link here (e.g. https://youtu.be/...)" class="w-full pl-11 pr-4 py-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 font-medium outline-none focus:bg-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition">
-            </div>
+<script>
+const $=id=>document.getElementById(id);
+function msg(el,text,error=false){el.classList.remove("hidden","bg-red-50","text-red-700","bg-purple-50","text-purple-700","bg-green-50","text-green-700");el.classList.add(error?"bg-red-50":"bg-purple-50",error?"text-red-700":"text-purple-700");el.textContent=text}
 
-            <div class="flex gap-2">
-              <select id="format" class="bg-slate-50 border border-slate-200 text-slate-800 font-semibold px-4 py-4 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-purple-500 transition cursor-pointer">
-                <option value="mp4">🎬 MP4 Video</option>
-                <option value="mp3">🎵 MP3 Audio</option>
-              </select>
+$("downloadForm").addEventListener("submit",async e=>{
+e.preventDefault(); $("downloadResult").classList.add("hidden");
+const btn=$("downloadBtn"), status=$("downloadStatus"), url=$("url").value.trim(), format=$("format").value;
+btn.disabled=true;btn.textContent="Processing...";msg(status,"Getting video information...");
+try{
+const infoRes=await fetch("/api/info",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url})});
+const info=await infoRes.json(); if(!infoRes.ok) throw new Error(info.error);
+$("info").classList.remove("hidden");$("info").innerHTML="<b>"+escapeHtml(info.title)+"</b>";
+msg(status,"Downloading and converting. Please wait...");
+const r=await fetch("/api/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url,format})});
+const data=await r.json(); if(!r.ok) throw new Error(data.error);
+$("downloadTitle").textContent=info.title||"File ready";$("downloadType").textContent="Format: "+format.toUpperCase();
+$("downloadLink").href=data.downloadUrl;$("downloadLink").download=data.filename;$("downloadResult").classList.remove("hidden");
+msg(status,"Completed successfully.");
+}catch(err){msg(status,err.message,true)}finally{btn.disabled=false;btn.textContent="Download"}
+});
 
-              <select id="quality" class="bg-slate-50 border border-slate-200 text-slate-800 font-semibold px-4 py-4 rounded-2xl outline-none focus:bg-white focus:ring-2 focus:ring-purple-500 transition cursor-pointer">
-                <option value="best">Best Quality</option>
-                <option value="1080">1080p Full HD</option>
-                <option value="720">720p HD</option>
-                <option value="480">480p SD</option>
-                <option value="320">320kbps (MP3)</option>
-                <option value="192">192kbps (MP3)</option>
-              </select>
-            </div>
-          </div>
+$("cutForm").addEventListener("submit",async e=>{
+e.preventDefault(); $("cutResult").classList.add("hidden");
+const btn=$("cutBtn"),status=$("cutStatus");btn.disabled=true;btn.textContent="Cutting...";
+try{
+const fd=new FormData(e.target);msg(status,"Uploading and cutting media...");
+const r=await fetch("/api/cut",{method:"POST",body:fd});const data=await r.json();if(!r.ok)throw new Error(data.error);
+$("cutLink").href=data.downloadUrl;$("cutLink").download=data.filename;$("cutResult").classList.remove("hidden");msg(status,"Cut completed successfully.");
+}catch(err){msg(status,err.message,true)}finally{btn.disabled=false;btn.textContent="Cut Media"}
+});
 
-          <button id="downloadBtn" type="submit" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-500/25 transition flex items-center justify-center gap-2 cursor-pointer">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            <span>Start Download Job</span>
-          </button>
-        </form>
-
-        <!-- Video Info Card Preview -->
-        <div id="videoInfoCard" class="hidden mt-6 bg-slate-50 border border-slate-200/80 rounded-2xl p-4 transition-all">
-          <div class="flex flex-col sm:flex-row gap-4 items-center">
-            <img id="videoThumb" class="w-full sm:w-36 h-24 object-cover rounded-xl shadow-sm bg-slate-200" src="" alt="Thumbnail">
-            <div class="flex-1 min-w-0 text-left">
-              <h3 id="videoTitle" class="font-bold text-slate-900 text-sm sm:text-base line-clamp-2"></h3>
-              <p id="videoAuthor" class="text-xs text-slate-500 mt-1 font-medium"></p>
-              <div class="flex items-center gap-2 mt-2">
-                <span class="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-semibold" id="formatBadge">MP4</span>
-                <span class="text-xs text-slate-400">Validated</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Progress / Status Container -->
-        <div id="progressContainer" class="hidden mt-6 bg-slate-50 border border-slate-200/80 rounded-2xl p-5 transition-all">
-          <div class="flex items-center justify-between mb-2">
-            <span id="stageText" class="text-xs font-bold uppercase tracking-wider text-purple-700">Processing...</span>
-            <span id="percentText" class="text-xs font-bold text-slate-700">0%</span>
-          </div>
-          <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-            <div id="progressBar" class="bg-gradient-to-r from-purple-600 to-pink-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
-          </div>
-          <p id="statusDetails" class="text-xs text-slate-500 mt-2">Job enqueued in background processor.</p>
-        </div>
-
-        <!-- Download Ready Result Card -->
-        <div id="downloadResult" class="hidden mt-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 transition-all">
-          <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-              </div>
-              <div>
-                <b id="resultTitle" class="text-slate-900 text-sm sm:text-base font-bold line-clamp-1">Media Ready!</b>
-                <p id="resultType" class="text-xs text-emerald-700 font-semibold mt-0.5">Click below to stream/save to your device</p>
-              </div>
-            </div>
-            <a id="downloadLink" href="#" download class="w-full sm:w-auto text-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-              <span>Download File</span>
-            </a>
-          </div>
-        </div>
-
-        <!-- Error Container -->
-        <div id="errorBox" class="hidden mt-6 bg-rose-50 border border-rose-200 rounded-2xl p-5 text-rose-700 text-sm transition-all">
-          <div class="flex items-start gap-3">
-            <div class="w-6 h-6 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center shrink-0 font-bold text-xs mt-0.5">!</div>
-            <div>
-              <p id="errorTitle" class="font-bold text-rose-900">Download Error</p>
-              <p id="errorMessage" class="text-xs mt-1 leading-relaxed"></p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- MP3 / MP4 Media Cutter Section -->
-    <section id="cutter" class="py-16 bg-white border-t border-slate-200/80">
-      <div class="max-w-3xl mx-auto px-4 sm:px-6">
-        <div class="text-center mb-8">
-          <div class="inline-flex items-center gap-1.5 bg-pink-50 text-pink-700 border border-pink-200 px-3 py-1 rounded-full text-xs font-bold uppercase mb-3">
-            ✂️ Trim Any Audio / Video
-          </div>
-          <h2 class="text-3xl font-extrabold text-slate-900">Audio & Video Cutter</h2>
-          <p class="text-slate-500 text-sm mt-1">Upload any local media file and extract exact segment in seconds with FFmpeg.</p>
-        </div>
-
-        <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
-          <form id="cutForm" class="space-y-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Select Media File (MP3 / MP4)</label>
-              <input id="media" name="media" type="file" accept="audio/*,video/*" required class="w-full border border-slate-200 rounded-2xl p-3.5 bg-white text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer">
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Start Time (sec or 00:00:00)</label>
-                <input name="start" value="0" placeholder="0 or 00:01:15" class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-purple-500">
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">End Time (sec or 00:00:00)</label>
-                <input name="end" placeholder="60 or 00:02:30" required class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-purple-500">
-              </div>
-            </div>
-
-            <button id="cutBtn" type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-xl transition shadow-sm">
-              Trim & Process Media
-            </button>
-          </form>
-
-          <div id="cutProgress" class="hidden mt-4 bg-purple-50 border border-purple-200 rounded-xl p-4 text-xs font-semibold text-purple-700 flex items-center gap-2">
-            <svg class="animate-spin h-4 w-4 text-purple-700" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-            <span>Trimming media with FFmpeg...</span>
-          </div>
-
-          <div id="cutResult" class="hidden mt-4 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div>
-              <b class="text-slate-900 text-sm">Trimmed file ready!</b>
-              <p class="text-xs text-emerald-700">Your media segment was successfully cut.</p>
-            </div>
-            <a id="cutLink" href="#" download class="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition">
-              Download Cut File
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Architecture & Features Section -->
-    <section id="features" class="py-16 bg-slate-100/70 border-t border-slate-200/80">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6">
-        <div class="text-center mb-10">
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Production-Ready Architecture</h2>
-          <p class="text-slate-600 text-sm mt-2 max-w-xl mx-auto">
-            Engineered with strict security, dedicated process isolation, and asynchronous job queuing.
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg mb-4">⚡</div>
-            <h3 class="font-bold text-slate-900 text-base">Async Job Queue</h3>
-            <p class="text-xs text-slate-500 mt-2 leading-relaxed">
-              Downloads run asynchronously in a dedicated worker queue, preventing long-running connection timeouts.
-            </p>
-          </div>
-
-          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="w-10 h-10 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center font-bold text-lg mb-4">🔒</div>
-            <h3 class="font-bold text-slate-900 text-base">Zero Secrets Exposure</h3>
-            <p class="text-xs text-slate-500 mt-2 leading-relaxed">
-              No cookies in browser storage or payloads. Authentication is managed securely through server environment variables.
-            </p>
-          </div>
-
-          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg mb-4">🛡️</div>
-            <h3 class="font-bold text-slate-900 text-base">Automatic Cleanup</h3>
-            <p class="text-xs text-slate-500 mt-2 leading-relaxed">
-              Disk protection engine automatically cleans completed and expired jobs to ensure zero disk bloating.
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="bg-slate-950 text-white border-t border-slate-900">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-      <div class="flex items-center gap-2">
-        <b class="text-white text-sm">VidsSave</b>
-        <span>• Dedicated Media Processor</span>
-      </div>
-      <p>Use only for content you have rights or permission to download.</p>
-    </div>
-  </footer>
-
-  <script>
-    const $ = id => document.getElementById(id);
-
-    // Dynamic backend URL configuration (supports standalone or Vercel frontend pointing to dedicated Node backend)
-    const API_BASE = (window.DOWNLOAD_API_URL || window.NEXT_PUBLIC_DOWNLOAD_API_URL || "").replace(/\/+$/, "");
-
-    function buildUrl(path) {
-      return API_BASE ? `${API_BASE}${path}` : path;
-    }
-
-    // Health check indicator
-    async function checkHealth() {
-      try {
-        const res = await fetch(buildUrl("/health"));
-        if (res.ok) {
-          $("backendStatusBadge").className = "flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-semibold";
-          $("backendStatusBadge").innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>Backend Online</span>';
-        } else {
-          $("backendStatusBadge").className = "flex items-center gap-2 bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-xl text-xs font-semibold";
-          $("backendStatusBadge").innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500"></span><span>Backend Degraded</span>';
-        }
-      } catch {
-        $("backendStatusBadge").className = "flex items-center gap-2 bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1.5 rounded-xl text-xs font-semibold";
-        $("backendStatusBadge").innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500"></span><span>Connecting...</span>';
-      }
-    }
-    checkHealth();
-
-    function showError(code, message) {
-      $("errorBox").classList.remove("hidden");
-      $("errorTitle").textContent = code ? `Error (${code})` : "Download Error";
-      
-      let msg = message || "An unexpected error occurred.";
-      if (code === "BOT_VERIFICATION") {
-        msg = "This video could not be downloaded because YouTube requires additional verification for the download server. Please try another public video or configure the server's authorized YouTube authentication.";
-      }
-      $("errorMessage").textContent = msg;
-    }
-
-    function hideError() {
-      $("errorBox").classList.add("hidden");
-    }
-
-    // Auto preview metadata on typing / paste
-    let debounceTimer;
-    $("url").addEventListener("input", e => {
-      clearTimeout(debounceTimer);
-      const url = e.target.value.trim();
-      if (url.length > 15 && (url.includes("youtube.com") || url.includes("youtu.be"))) {
-        debounceTimer = setTimeout(() => fetchInfo(url), 350);
-      }
-    });
-
-    async function fetchInfo(url) {
-      try {
-        const res = await fetch(buildUrl("/api/info"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.title) {
-            $("videoTitle").textContent = data.title;
-            $("videoAuthor").textContent = data.author ? `by ${data.author}` : "";
-            if (data.thumbnail) $("videoThumb").src = data.thumbnail;
-            $("formatBadge").textContent = $("format").value.toUpperCase();
-            $("videoInfoCard").classList.remove("hidden");
-          }
-        }
-      } catch {}
-    }
-
-    // Poll job status
-    function pollJob(jobId, format) {
-      return new Promise((resolve, reject) => {
-        const interval = setInterval(async () => {
-          try {
-            const res = await fetch(buildUrl(`/api/download/${jobId}`));
-            if (!res.ok) {
-              clearInterval(interval);
-              const errData = await res.json().catch(() => ({}));
-              return reject(new Error(errData.message || "Failed to query job status"));
-            }
-
-            const data = await res.json();
-
-            // Update UI progress
-            if (data.progress !== undefined) {
-              const p = Math.round(data.progress);
-              $("progressBar").style.width = `${p}%`;
-              $("percentText").textContent = `${p}%`;
-            }
-
-            if (data.stage) {
-              $("stageText").textContent = data.stage.toUpperCase();
-              if (data.stage === "downloading") {
-                $("statusDetails").textContent = "Streaming media from YouTube...";
-              } else if (data.stage === "transcoding") {
-                $("statusDetails").textContent = "Processing and converting with FFmpeg...";
-              } else if (data.stage === "queued") {
-                $("statusDetails").textContent = "Queued in worker pool...";
-              }
-            }
-
-            if (data.status === "completed") {
-              clearInterval(interval);
-              resolve(data);
-            } else if (data.status === "failed") {
-              clearInterval(interval);
-              const err = new Error(data.message || "Media processing failed.");
-              err.code = data.code;
-              reject(err);
-            }
-          } catch (err) {
-            clearInterval(interval);
-            reject(err);
-          }
-        }, 1000);
-      });
-    }
-
-    // Download form submit
-    $("downloadForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      hideError();
-      $("downloadResult").classList.add("hidden");
-      $("progressContainer").classList.remove("hidden");
-      
-      const btn = $("downloadBtn");
-      const url = $("url").value.trim();
-      const format = $("format").value;
-      const quality = $("quality").value;
-      const title = $("videoTitle").textContent || "";
-
-      btn.disabled = true;
-      btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Initializing Job...`;
-
-      $("progressBar").style.width = "5%";
-      $("percentText").textContent = "5%";
-      $("stageText").textContent = "STARTING";
-      $("statusDetails").textContent = "Creating download job on server...";
-
-      try {
-        // Step 1: Create Job
-        const res = await fetch(buildUrl("/api/download"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url, format, quality, title })
-        });
-
-        const data = await res.json();
-        if (!res.ok || !data.jobId) {
-          const err = new Error(data.message || "Failed to create download job.");
-          err.code = data.code;
-          throw err;
-        }
-
-        // Step 2: Poll Job
-        const completedJob = await pollJob(data.jobId, format);
-
-        // Step 3: Success
-        $("progressBar").style.width = "100%";
-        $("percentText").textContent = "100%";
-        $("stageText").textContent = "COMPLETED";
-        $("statusDetails").textContent = "Media ready for high-speed download.";
-
-        $("resultTitle").textContent = title || completedJob.filename || "Your media file is ready";
-        $("resultType").textContent = `Format: ${format.toUpperCase()} • Size: ${completedJob.fileSize ? (completedJob.fileSize / (1024 * 1024)).toFixed(1) + ' MB' : 'Ready'}`;
-        $("downloadLink").href = buildUrl(completedJob.downloadUrl);
-        $("downloadLink").download = completedJob.filename || `media.${format}`;
-        
-        $("downloadResult").classList.remove("hidden");
-      } catch (err) {
-        $("progressContainer").classList.add("hidden");
-        showError(err.code, err.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg><span>Start Download Job</span>`;
-      }
-    });
-
-    // Media Cutter Form Submit
-    $("cutForm").addEventListener("submit", async e => {
-      e.preventDefault();
-      $("cutResult").classList.add("hidden");
-      $("cutProgress").classList.remove("hidden");
-
-      const btn = $("cutBtn");
-      btn.disabled = true;
-
-      try {
-        const fd = new FormData(e.target);
-        const r = await fetch(buildUrl("/api/cut"), { method: "POST", body: fd });
-        const data = await r.json();
-        if (!r.ok || !data.success) {
-          throw new Error(data.message || "Failed to cut media");
-        }
-
-        $("cutLink").href = buildUrl(data.downloadUrl);
-        $("cutLink").download = data.filename;
-        $("cutResult").classList.remove("hidden");
-      } catch (err) {
-        alert("Media Cutter Error: " + err.message);
-      } finally {
-        $("cutProgress").classList.add("hidden");
-        btn.disabled = false;
-      }
-    });
-  </script>
-</body>
-</html>
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+</script>
+</body></html>

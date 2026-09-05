@@ -1,9 +1,4 @@
 node_modules/
 downloads/*
-!downloads/.gitkeep
 uploads/*
-!uploads/.gitkeep
-bin/*
-!bin/.gitkeep
-temp_cookies.txt
-.DS_Store
+bin/yt-dlp.exe
