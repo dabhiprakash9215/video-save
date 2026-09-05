@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const { spawn, execSync } = require("child_process");
 const https = require("https");
 const http = require("http");
+const querystring = require("querystring");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -59,6 +60,55 @@ function cleanYoutubeUrl(value) {
     }
   } catch {}
   return String(value).trim();
+}
+
+// ----------------------------------------------------
+// External API Parser (api.vidssave.com)
+// ----------------------------------------------------
+function fetchVidsSaveApi(videoUrl) {
+  return new Promise((resolve, reject) => {
+    const postData = querystring.stringify({
+      auth: "20250901majwlqo",
+      domain: "api-ak.vidssave.com",
+      origin: "cache",
+      link: videoUrl
+    });
+
+    const req = https.request("https://api.vidssave.com/api/contentsite_api/media/parse", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Length": Buffer.byteLength(postData),
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*"
+      },
+      timeout: 15000
+    }, (res) => {
+      let data = "";
+      res.on("data", chunk => data += chunk);
+      res.on("end", () => {
+        try {
+          const json = JSON.parse(data);
+          if (json && (json.status === 1 || json.status_code === "success") && json.data) {
+            resolve(json.data);
+          } else {
+            reject(new Error(json.msg || json.message || "Failed to parse video data from API"));
+          }
+        } catch (err) {
+          reject(new Error("Invalid JSON response from parse API: " + err.message));
+        }
+      });
+    });
+
+    req.on("error", reject);
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("Parse API request timed out"));
+    });
+
+    req.write(postData);
+    req.end();
+  });
 }
 
 function downloadBinary(url, dest, redirects = 0) {
@@ -161,13 +211,13 @@ function run(command, args) {
   });
 }
 
-// Helper to run yt-dlp with automatic player_client rotation to bypass datacenter blocks
+// Helper to run yt-dlp with fallback
 async function runYtDlp(bin, baseArgs, targetUrl) {
   const clientProfiles = [
     ["--extractor-args", "youtube:player_client=android,web"],
     ["--extractor-args", "youtube:player_client=ios,mweb"],
     ["--extractor-args", "youtube:player_client=web,mweb,android,ios"],
-    [] // default fallback
+    []
   ];
 
   let lastError = null;
@@ -187,7 +237,6 @@ async function runYtDlp(bin, baseArgs, targetUrl) {
     } catch (err) {
       lastError = err;
       const msg = String(err.message || err);
-      // If error is specific to player response extraction, try next profile
       if (/player response|extract|bot|sign in/i.test(msg)) {
         continue;
       }
@@ -217,8 +266,24 @@ app.post("/api/info", async (req, res) => {
     if (!youtubeUrlOk(url)) return res.status(400).json({ error: "Enter a valid YouTube URL." });
 
     const cleanUrl = cleanYoutubeUrl(url);
-    const bin = await getOrInitYtDlp();
 
+    // 1. Try VidsSave Fast API
+    try {
+      const apiData = await fetchVidsSaveApi(cleanUrl);
+      if (apiData && apiData.title) {
+        return res.json({
+          ok: true,
+          title: apiData.title,
+          duration: apiData.duration || 0,
+          thumbnail: apiData.thumbnail || ""
+        });
+      }
+    } catch (apiErr) {
+      console.warn("[/api/info] API fallback to yt-dlp:", apiErr.message);
+    }
+
+    // 2. Fallback to local yt-dlp
+    const bin = await getOrInitYtDlp();
     const r = await runYtDlp(bin, [
       "--dump-single-json",
       "--skip-download"
@@ -245,6 +310,42 @@ app.post("/api/download", async (req, res) => {
     if (!["mp3", "mp4"].includes(format)) return res.status(400).json({ error: "Choose MP3 or MP4." });
 
     const cleanUrl = cleanYoutubeUrl(url);
+
+    // 1. Try VidsSave API for direct high-speed download link
+    try {
+      const apiData = await fetchVidsSaveApi(cleanUrl);
+      if (apiData && Array.isArray(apiData.resources) && apiData.resources.length > 0) {
+        let matched = null;
+        if (format === "mp3") {
+          matched = apiData.resources.find(r => r.format === "MP3")
+            || apiData.resources.find(r => r.type === "audio")
+            || apiData.resources[0];
+        } else {
+          // Prioritize high-definition MP4
+          const mp4s = apiData.resources.filter(r => r.format === "MP4" && r.type === "video");
+          matched = mp4s.find(r => r.quality === "720P")
+            || mp4s.find(r => r.quality === "1080P")
+            || mp4s.find(r => r.quality === "480P")
+            || mp4s.find(r => r.quality === "360P")
+            || mp4s[0]
+            || apiData.resources[0];
+        }
+
+        if (matched && matched.download_url) {
+          const safeTitle = (apiData.title || "video").replace(/[^\w\s.-]/g, "_").slice(0, 80);
+          const filename = `${safeTitle}.${format}`;
+          return res.json({
+            ok: true,
+            filename,
+            downloadUrl: matched.download_url
+          });
+        }
+      }
+    } catch (apiErr) {
+      console.warn("[/api/download] API fallback to yt-dlp:", apiErr.message);
+    }
+
+    // 2. Fallback to local yt-dlp download & ffmpeg
     const bin = await getOrInitYtDlp();
     if (!ffmpeg) return res.status(500).json({ error: "FFmpeg is missing. Please restart the service." });
 
@@ -383,7 +484,7 @@ setInterval(() => {
   cleanDirectory(UPLOADS);
 }, 5 * 60 * 1000);
 
-// Initialize binary and start server
+// Initialize binary in background as fallback
 getOrInitYtDlp().catch(err => console.warn("[Startup] Binary init note:", err.message));
 
 app.listen(PORT, "0.0.0.0", () => {
