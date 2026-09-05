@@ -3,18 +3,28 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { spawn } = require("child_process");
+const { spawn, execSync } = require("child_process");
+const https = require("https");
+const http = require("http");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 const DOWNLOADS = path.join(ROOT, "downloads");
 const UPLOADS = path.join(ROOT, "uploads");
-const YTDLP = path.join(ROOT, "bin", process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp");
+const BIN_DIR = path.join(ROOT, "bin");
+let YTDLP = path.join(BIN_DIR, process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp");
 
-fs.mkdirSync(DOWNLOADS, { recursive: true });
-fs.mkdirSync(UPLOADS, { recursive: true });
-fs.mkdirSync(path.dirname(YTDLP), { recursive: true });
+function ensureDirectories() {
+  try {
+    fs.mkdirSync(DOWNLOADS, { recursive: true });
+    fs.mkdirSync(UPLOADS, { recursive: true });
+    fs.mkdirSync(BIN_DIR, { recursive: true });
+  } catch (e) {
+    console.error("[VidsSave] Error creating directories:", e.message);
+  }
+}
+ensureDirectories();
 
 const ffmpeg = require("ffmpeg-static");
 const upload = multer({
@@ -30,8 +40,96 @@ function youtubeUrlOk(value) {
   try {
     const u = new URL(value);
     const h = u.hostname.toLowerCase();
-    return ["youtube.com","www.youtube.com","m.youtube.com","youtu.be","www.youtu.be"].includes(h);
-  } catch { return false; }
+    return ["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "www.youtu.be"].includes(h);
+  } catch {
+    return false;
+  }
+}
+
+function downloadBinary(url, dest, redirects = 0) {
+  if (redirects > 5) return Promise.reject(new Error("Too many redirects"));
+  return new Promise((resolve, reject) => {
+    const client = url.startsWith("https") ? https : http;
+    const req = client.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+      }
+    }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        let redirectUrl = res.headers.location;
+        if (!redirectUrl.startsWith("http")) {
+          const parsed = new URL(url);
+          redirectUrl = `${parsed.origin}${redirectUrl}`;
+        }
+        res.resume();
+        return resolve(downloadBinary(redirectUrl, dest, redirects + 1));
+      }
+      if (res.statusCode !== 200) {
+        res.resume();
+        return reject(new Error(`Download failed with status: ${res.statusCode}`));
+      }
+      const fileStream = fs.createWriteStream(dest);
+      res.pipe(fileStream);
+      fileStream.on("finish", () => fileStream.close(() => resolve()));
+      fileStream.on("error", (err) => {
+        try { fs.unlinkSync(dest); } catch {}
+        reject(err);
+      });
+    });
+    req.on("error", (err) => {
+      try { fs.unlinkSync(dest); } catch {}
+      reject(err);
+    });
+  });
+}
+
+async function getOrInitYtDlp() {
+  ensureDirectories();
+  const isWin = process.platform === "win32";
+
+  // 1. Check if bin file exists and is valid
+  if (fs.existsSync(YTDLP)) {
+    try {
+      const stats = fs.statSync(YTDLP);
+      if (stats.size > 1000000) {
+        if (!isWin) {
+          try { fs.chmodSync(YTDLP, 0o755); } catch {}
+        }
+        return YTDLP;
+      }
+    } catch {}
+  }
+
+  // 2. Check if yt-dlp is available in system path
+  try {
+    const checkCmd = isWin ? "where yt-dlp" : "which yt-dlp";
+    const found = execSync(checkCmd, { encoding: "utf8" }).trim().split("\n")[0].trim();
+    if (found && fs.existsSync(found)) {
+      console.log(`[VidsSave] Using system yt-dlp binary at: ${found}`);
+      YTDLP = found;
+      return YTDLP;
+    }
+  } catch {}
+
+  // 3. Download binary automatically if missing
+  console.log(`[VidsSave] yt-dlp binary not found. Downloading for ${process.platform}...`);
+  const downloadUrl = isWin
+    ? "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe"
+    : "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp";
+
+  if (!isWin) {
+    try {
+      execSync(`curl -L -s --retry 3 "${downloadUrl}" -o "${YTDLP}"`);
+    } catch (e) {
+      await downloadBinary(downloadUrl, YTDLP);
+    }
+    try { fs.chmodSync(YTDLP, 0o755); } catch {}
+  } else {
+    await downloadBinary(downloadUrl, YTDLP);
+  }
+
+  console.log(`[VidsSave] yt-dlp binary ready at: ${YTDLP}`);
+  return YTDLP;
 }
 
 function run(command, args) {
@@ -48,22 +146,27 @@ function run(command, args) {
   });
 }
 
-function safeExt(format) { return format === "mp3" ? "mp3" : "mp4"; }
-
-app.get("/api/health", (req,res) => {
+app.get("/api/health", async (req, res) => {
+  let ytOk = false;
+  try {
+    const binPath = await getOrInitYtDlp();
+    ytOk = fs.existsSync(binPath);
+  } catch {}
   res.json({
     ok: true,
-    ytDlp: fs.existsSync(YTDLP),
-    ffmpeg: !!ffmpeg
+    ytDlp: ytOk,
+    ffmpeg: !!ffmpeg,
+    platform: process.platform
   });
 });
 
-app.post("/api/info", async (req,res) => {
+app.post("/api/info", async (req, res) => {
   try {
     const { url } = req.body || {};
     if (!youtubeUrlOk(url)) return res.status(400).json({ error: "Enter a valid YouTube URL." });
 
-    const r = await run(YTDLP, [
+    const bin = await getOrInitYtDlp();
+    const r = await run(bin, [
       "--no-playlist",
       "--dump-single-json",
       "--skip-download",
@@ -78,17 +181,20 @@ app.post("/api/info", async (req,res) => {
       thumbnail: data.thumbnail || ""
     });
   } catch (e) {
+    console.error("[/api/info error]", e);
     res.status(500).json({ error: friendlyError(e) });
   }
 });
 
-app.post("/api/download", async (req,res) => {
+app.post("/api/download", async (req, res) => {
   try {
+    ensureDirectories();
     const { url, format } = req.body || {};
     if (!youtubeUrlOk(url)) return res.status(400).json({ error: "Enter a valid YouTube URL." });
-    if (!["mp3","mp4"].includes(format)) return res.status(400).json({ error: "Choose MP3 or MP4." });
-    if (!fs.existsSync(YTDLP)) return res.status(500).json({ error: "yt-dlp is missing. Run START.bat once." });
-    if (!ffmpeg) return res.status(500).json({ error: "FFmpeg is missing. Run npm install again." });
+    if (!["mp3", "mp4"].includes(format)) return res.status(400).json({ error: "Choose MP3 or MP4." });
+
+    const bin = await getOrInitYtDlp();
+    if (!ffmpeg) return res.status(500).json({ error: "FFmpeg is missing. Please restart the service." });
 
     const id = crypto.randomBytes(10).toString("hex");
     const titleTemplate = path.join(DOWNLOADS, `${id}.%(ext)s`);
@@ -119,7 +225,7 @@ app.post("/api/download", async (req,res) => {
       ];
     }
 
-    await run(YTDLP, args);
+    await run(bin, args);
 
     const files = fs.readdirSync(DOWNLOADS)
       .filter(f => f.startsWith(id + ".") && !f.endsWith(".part"));
@@ -128,18 +234,20 @@ app.post("/api/download", async (req,res) => {
     const filename = files[0];
 
     res.json({
-      ok:true,
+      ok: true,
       filename,
-      downloadUrl:`/downloads/${encodeURIComponent(filename)}`
+      downloadUrl: `/downloads/${encodeURIComponent(filename)}`
     });
-  } catch(e) {
+  } catch (e) {
+    console.error("[/api/download error]", e);
     res.status(500).json({ error: friendlyError(e) });
   }
 });
 
-app.post("/api/cut", upload.single("media"), async (req,res) => {
+app.post("/api/cut", upload.single("media"), async (req, res) => {
   let inputPath = null, outputPath = null;
   try {
+    ensureDirectories();
     if (!req.file) return res.status(400).json({ error: "Choose an MP3 or MP4 file." });
 
     const start = parseTime(req.body.start);
@@ -150,7 +258,7 @@ app.post("/api/cut", upload.single("media"), async (req,res) => {
 
     inputPath = req.file.path;
     const ext = path.extname(req.file.originalname).toLowerCase() || ".mp4";
-    const outExt = [".mp3",".wav"].includes(ext) ? ext : ".mp4";
+    const outExt = [".mp3", ".wav"].includes(ext) ? ext : ".mp4";
     const id = crypto.randomBytes(10).toString("hex");
     outputPath = path.join(DOWNLOADS, `${id}${outExt}`);
 
@@ -172,15 +280,16 @@ app.post("/api/cut", upload.single("media"), async (req,res) => {
 
     if (!fs.existsSync(outputPath)) throw new Error("Cut file was not created.");
 
-    fs.unlinkSync(inputPath);
+    try { fs.unlinkSync(inputPath); } catch {}
     res.json({
-      ok:true,
-      filename:path.basename(outputPath),
-      downloadUrl:`/downloads/${encodeURIComponent(path.basename(outputPath))}`
+      ok: true,
+      filename: path.basename(outputPath),
+      downloadUrl: `/downloads/${encodeURIComponent(path.basename(outputPath))}`
     });
-  } catch(e) {
+  } catch (e) {
     if (inputPath && fs.existsSync(inputPath)) { try { fs.unlinkSync(inputPath); } catch {} }
     if (outputPath && fs.existsSync(outputPath)) { try { fs.unlinkSync(outputPath); } catch {} }
+    console.error("[/api/cut error]", e);
     res.status(500).json({ error: friendlyError(e) });
   }
 });
@@ -191,18 +300,20 @@ function parseTime(v) {
   if (/^\d+(\.\d+)?$/.test(s)) return Number(s);
   const parts = s.split(":").map(Number);
   if (parts.some(Number.isNaN) || parts.length > 3) return NaN;
-  if (parts.length === 2) return parts[0]*60 + parts[1];
-  if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
   return NaN;
 }
 
 function friendlyError(e) {
   const m = String(e.message || e);
   if (/Sign in to confirm|bot|cookies/i.test(m)) {
-    return "YouTube is asking for verification. Try another public video or use an authorized cookies setup.";
+    return "YouTube is asking for bot/verification. Try another public video link.";
   }
-  if (/ffmpeg/i.test(m)) return "FFmpeg error. Please run START.bat again so dependencies are installed.";
-  if (/yt-dlp/i.test(m)) return "yt-dlp error. Run START.bat again to update/download yt-dlp.";
+  if (/ffmpeg/i.test(m)) return "FFmpeg conversion error. Please try again.";
+  if (/yt-dlp.*(not found|missing|ENOENT|EACCES)/i.test(m)) {
+    return "Downloader binary is initializing on the server. Please wait 10 seconds and try again.";
+  }
   return m.slice(-1800);
 }
 
@@ -217,7 +328,7 @@ setInterval(() => {
         const filePath = path.join(dir, file);
         const stats = fs.statSync(filePath);
         if (now - stats.mtimeMs > 10 * 60 * 1000) {
-          fs.unlinkSync(filePath);
+          try { fs.unlinkSync(filePath); } catch {}
         }
       }
     } catch (err) {}
@@ -226,11 +337,12 @@ setInterval(() => {
   cleanDirectory(UPLOADS);
 }, 5 * 60 * 1000);
 
+// Initialize binary and start server
+getOrInitYtDlp().catch(err => console.warn("[Startup] Binary init note:", err.message));
+
 app.listen(PORT, "0.0.0.0", () => {
-  console.log("");
   console.log("====================================");
   console.log(" VidsSave is running");
   console.log(` http://0.0.0.0:${PORT}`);
   console.log("====================================");
 });
-
