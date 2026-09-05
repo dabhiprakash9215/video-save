@@ -39,7 +39,7 @@
       background: radial-gradient(circle at 50% 20%, rgba(124, 58, 237, 0.12) 0%, rgba(236, 72, 153, 0.05) 50%, transparent 80%);
     }
     .glass-card {
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255, 255, 255, 0.96);
       backdrop-filter: blur(16px);
       box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.08), 0 0 1px 1px rgba(0, 0, 0, 0.04);
     }
@@ -67,15 +67,14 @@
       <nav class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
         <a href="#download" class="hover:text-purple-600 transition">Downloader</a>
         <a href="#cutter" class="hover:text-purple-600 transition">Media Cutter</a>
-        <a href="#guide" class="hover:text-purple-600 transition">Cookies & Bot Fix</a>
+        <a href="#features" class="hover:text-purple-600 transition">Architecture</a>
       </nav>
 
       <div class="flex items-center gap-3">
-        <button id="openSettingsBtn" class="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold border border-slate-200/60 transition shadow-sm">
-          <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          <span>Cookie Settings</span>
-          <span id="cookieBadge" class="hidden w-2 h-2 rounded-full bg-emerald-500"></span>
-        </button>
+        <div id="backendStatusBadge" class="flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-semibold">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Backend Online</span>
+        </div>
         <a href="#download" class="bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shadow-sm">Get Started</a>
       </div>
     </div>
@@ -86,15 +85,15 @@
     <section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 text-center">
       <div class="inline-flex items-center gap-2 bg-purple-50 text-purple-700 border border-purple-200/80 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6 shadow-sm">
         <span class="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
-        Fast YouTube MP3 & MP4 Converter
+        Dedicated Node.js Media Processor
       </div>
 
       <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 max-w-3xl mx-auto leading-tight">
-        Download & Convert <br class="hidden sm:inline"/><span class="gradient-text">YouTube in Seconds</span>
+        High-Speed <br class="hidden sm:inline"/><span class="gradient-text">YouTube Media Processor</span>
       </h1>
       
       <p class="mt-4 text-slate-600 text-base sm:text-lg max-w-2xl mx-auto font-normal">
-        Save high quality MP4 videos or crystal clear MP3 audio files with built-in bot bypass and media cutter.
+        Queue and extract high quality MP4 videos or crystal clear 320kbps MP3 audio with asynchronous backend job processing.
       </p>
 
       <!-- Main Downloader Card -->
@@ -118,14 +117,16 @@
                 <option value="best">Best Quality</option>
                 <option value="1080">1080p Full HD</option>
                 <option value="720">720p HD</option>
+                <option value="480">480p SD</option>
                 <option value="320">320kbps (MP3)</option>
+                <option value="192">192kbps (MP3)</option>
               </select>
             </div>
           </div>
 
           <button id="downloadBtn" type="submit" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-purple-500/25 transition flex items-center justify-center gap-2 cursor-pointer">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            <span>Start Download</span>
+            <span>Start Download Job</span>
           </button>
         </form>
 
@@ -138,14 +139,23 @@
               <p id="videoAuthor" class="text-xs text-slate-500 mt-1 font-medium"></p>
               <div class="flex items-center gap-2 mt-2">
                 <span class="inline-flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-semibold" id="formatBadge">MP4</span>
-                <span class="text-xs text-slate-400">Ready to download</span>
+                <span class="text-xs text-slate-400">Validated</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Status & Messages -->
-        <div id="downloadStatus" class="hidden mt-4 rounded-2xl p-4 text-sm font-medium transition-all"></div>
+        <!-- Progress / Status Container -->
+        <div id="progressContainer" class="hidden mt-6 bg-slate-50 border border-slate-200/80 rounded-2xl p-5 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <span id="stageText" class="text-xs font-bold uppercase tracking-wider text-purple-700">Processing...</span>
+            <span id="percentText" class="text-xs font-bold text-slate-700">0%</span>
+          </div>
+          <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+            <div id="progressBar" class="bg-gradient-to-r from-purple-600 to-pink-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+          <p id="statusDetails" class="text-xs text-slate-500 mt-2">Job enqueued in background processor.</p>
+        </div>
 
         <!-- Download Ready Result Card -->
         <div id="downloadResult" class="hidden mt-6 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 transition-all">
@@ -155,14 +165,25 @@
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
               </div>
               <div>
-                <b id="resultTitle" class="text-slate-900 text-sm sm:text-base font-bold line-clamp-1">File is ready!</b>
-                <p id="resultType" class="text-xs text-emerald-700 font-semibold mt-0.5">Click below to save to your device</p>
+                <b id="resultTitle" class="text-slate-900 text-sm sm:text-base font-bold line-clamp-1">Media Ready!</b>
+                <p id="resultType" class="text-xs text-emerald-700 font-semibold mt-0.5">Click below to stream/save to your device</p>
               </div>
             </div>
             <a id="downloadLink" href="#" download class="w-full sm:w-auto text-center bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
               <span>Download File</span>
             </a>
+          </div>
+        </div>
+
+        <!-- Error Container -->
+        <div id="errorBox" class="hidden mt-6 bg-rose-50 border border-rose-200 rounded-2xl p-5 text-rose-700 text-sm transition-all">
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center shrink-0 font-bold text-xs mt-0.5">!</div>
+            <div>
+              <p id="errorTitle" class="font-bold text-rose-900">Download Error</p>
+              <p id="errorMessage" class="text-xs mt-1 leading-relaxed"></p>
+            </div>
           </div>
         </div>
       </div>
@@ -176,7 +197,7 @@
             ✂️ Trim Any Audio / Video
           </div>
           <h2 class="text-3xl font-extrabold text-slate-900">Audio & Video Cutter</h2>
-          <p class="text-slate-500 text-sm mt-1">Upload any local media file and extract exact segment in seconds.</p>
+          <p class="text-slate-500 text-sm mt-1">Upload any local media file and extract exact segment in seconds with FFmpeg.</p>
         </div>
 
         <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
@@ -202,7 +223,10 @@
             </button>
           </form>
 
-          <div id="cutStatus" class="hidden mt-4 rounded-xl p-4 text-sm font-medium"></div>
+          <div id="cutProgress" class="hidden mt-4 bg-purple-50 border border-purple-200 rounded-xl p-4 text-xs font-semibold text-purple-700 flex items-center gap-2">
+            <svg class="animate-spin h-4 w-4 text-purple-700" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <span>Trimming media with FFmpeg...</span>
+          </div>
 
           <div id="cutResult" class="hidden mt-4 bg-emerald-50 border border-emerald-200 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-center gap-3">
             <div>
@@ -217,34 +241,38 @@
       </div>
     </section>
 
-    <!-- Bot Verification / Cookies Setup Guide -->
-    <section id="guide" class="py-16 bg-slate-100/70 border-t border-slate-200/80">
+    <!-- Architecture & Features Section -->
+    <section id="features" class="py-16 bg-slate-100/70 border-t border-slate-200/80">
       <div class="max-w-4xl mx-auto px-4 sm:px-6">
         <div class="text-center mb-10">
-          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">How to Fix "YouTube Bot Verification" on Vercel</h2>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900">Production-Ready Architecture</h2>
           <p class="text-slate-600 text-sm mt-2 max-w-xl mx-auto">
-            YouTube restricts automated downloads on cloud server datacenter IPs (Vercel, AWS, GCP). You can solve this in 30 seconds using Cookies.
+            Engineered with strict security, dedicated process isolation, and asynchronous job queuing.
           </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg mb-4">1</div>
-            <h3 class="font-bold text-slate-900 text-base">Method 1: Direct Cookie Settings (Fastest)</h3>
+            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-lg mb-4">⚡</div>
+            <h3 class="font-bold text-slate-900 text-base">Async Job Queue</h3>
             <p class="text-xs text-slate-500 mt-2 leading-relaxed">
-              1. Install Chrome/Edge extension: <a href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbngbenkjcffliehddfacjne" target="_blank" class="text-purple-600 underline font-semibold">Get cookies.txt LOCALLY</a>.<br>
-              2. Open YouTube while logged in and click the extension to copy cookies.<br>
-              3. Click <b>"Cookie Settings"</b> at top-right of this page, paste the text, and click <b>Save</b>.
+              Downloads run asynchronously in a dedicated worker queue, preventing long-running connection timeouts.
             </p>
           </div>
 
           <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <div class="w-10 h-10 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center font-bold text-lg mb-4">2</div>
-            <h3 class="font-bold text-slate-900 text-base">Method 2: Vercel Environment Variable</h3>
+            <div class="w-10 h-10 rounded-xl bg-pink-100 text-pink-700 flex items-center justify-center font-bold text-lg mb-4">🔒</div>
+            <h3 class="font-bold text-slate-900 text-base">Zero Secrets Exposure</h3>
             <p class="text-xs text-slate-500 mt-2 leading-relaxed">
-              1. Go to your Vercel Dashboard &gt; Project &gt; <b>Settings</b> &gt; <b>Environment Variables</b>.<br>
-              2. Add variable key: <code class="bg-slate-100 px-1.5 py-0.5 rounded text-purple-700 font-mono font-bold">YOUTUBE_COOKIES</code>.<br>
-              3. Paste your full Netscape cookies text into the Value and Redeploy.
+              No cookies in browser storage or payloads. Authentication is managed securely through server environment variables.
+            </p>
+          </div>
+
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg mb-4">🛡️</div>
+            <h3 class="font-bold text-slate-900 text-base">Automatic Cleanup</h3>
+            <p class="text-xs text-slate-500 mt-2 leading-relaxed">
+              Disk protection engine automatically cleans completed and expired jobs to ensure zero disk bloating.
             </p>
           </div>
         </div>
@@ -252,44 +280,11 @@
     </section>
   </main>
 
-  <!-- Cookie Settings Modal -->
-  <div id="settingsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 transform transition-all">
-      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold">⚙️</div>
-          <div>
-            <h3 class="font-extrabold text-slate-900 text-lg">YouTube Cookie Settings</h3>
-            <p class="text-xs text-slate-500">Bypasses YouTube bot verification on cloud hosting</p>
-          </div>
-        </div>
-        <button id="closeSettingsBtn" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-
-      <div class="mt-4 space-y-3">
-        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Paste Netscape format cookies.txt</label>
-        <textarea id="cookieInput" rows="8" placeholder="# Netscape HTTP Cookie File&#10;.youtube.com	TRUE	/	TRUE	1798765432	SID	..." class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 font-mono text-xs text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-purple-500 custom-scrollbar"></textarea>
-        <p class="text-xs text-slate-400">Cookies are saved privately in your browser storage and sent with your download requests to authenticate with YouTube.</p>
-      </div>
-
-      <div class="mt-6 flex flex-col sm:flex-row gap-3 justify-end">
-        <button id="clearCookieBtn" class="text-xs font-bold text-rose-600 hover:bg-rose-50 px-4 py-2.5 rounded-xl transition">
-          Clear Saved Cookies
-        </button>
-        <button id="saveCookieBtn" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-sm px-6 py-2.5 rounded-xl shadow-md shadow-purple-600/20 transition">
-          Save Cookies
-        </button>
-      </div>
-    </div>
-  </div>
-
   <footer class="bg-slate-950 text-white border-t border-slate-900">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
       <div class="flex items-center gap-2">
         <b class="text-white text-sm">VidsSave</b>
-        <span>• High-Speed Media Downloader</span>
+        <span>• Dedicated Media Processor</span>
       </div>
       <p>Use only for content you have rights or permission to download.</p>
     </div>
@@ -297,62 +292,45 @@
 
   <script>
     const $ = id => document.getElementById(id);
-    
-    // Cookie management
-    const COOKIE_KEY = "vidssave_user_cookies";
-    function getStoredCookies() {
-      return localStorage.getItem(COOKIE_KEY) || "";
+
+    // Dynamic backend URL configuration (supports standalone or Vercel frontend pointing to dedicated Node backend)
+    const API_BASE = (window.DOWNLOAD_API_URL || window.NEXT_PUBLIC_DOWNLOAD_API_URL || "").replace(/\/+$/, "");
+
+    function buildUrl(path) {
+      return API_BASE ? `${API_BASE}${path}` : path;
     }
-    function updateCookieBadge() {
-      const c = getStoredCookies();
-      if (c && c.trim().length > 10) {
-        $("cookieBadge").classList.remove("hidden");
-      } else {
-        $("cookieBadge").classList.add("hidden");
+
+    // Health check indicator
+    async function checkHealth() {
+      try {
+        const res = await fetch(buildUrl("/health"));
+        if (res.ok) {
+          $("backendStatusBadge").className = "flex items-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-xl text-xs font-semibold";
+          $("backendStatusBadge").innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>Backend Online</span>';
+        } else {
+          $("backendStatusBadge").className = "flex items-center gap-2 bg-amber-50 text-amber-700 border border-amber-200 px-3 py-1.5 rounded-xl text-xs font-semibold";
+          $("backendStatusBadge").innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-500"></span><span>Backend Degraded</span>';
+        }
+      } catch {
+        $("backendStatusBadge").className = "flex items-center gap-2 bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1.5 rounded-xl text-xs font-semibold";
+        $("backendStatusBadge").innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-500"></span><span>Connecting...</span>';
       }
     }
-    updateCookieBadge();
+    checkHealth();
 
-    // Modal Events
-    $("openSettingsBtn").addEventListener("click", () => {
-      $("cookieInput").value = getStoredCookies();
-      $("settingsModal").classList.remove("hidden");
-    });
-    $("closeSettingsBtn").addEventListener("click", () => {
-      $("settingsModal").classList.add("hidden");
-    });
-    $("saveCookieBtn").addEventListener("click", () => {
-      const val = $("cookieInput").value.trim();
-      localStorage.setItem(COOKIE_KEY, val);
-      updateCookieBadge();
-      $("settingsModal").classList.add("hidden");
-      showToast("Cookies saved successfully!");
-    });
-    $("clearCookieBtn").addEventListener("click", () => {
-      localStorage.removeItem(COOKIE_KEY);
-      $("cookieInput").value = "";
-      updateCookieBadge();
-      showToast("Cookies cleared");
-    });
-
-    function showToast(msg) {
-      const status = $("downloadStatus");
-      showMsg(status, msg, false);
-      setTimeout(() => status.classList.add("hidden"), 3000);
-    }
-
-    function showMsg(el, text, isError = false) {
-      el.classList.remove("hidden", "bg-rose-50", "text-rose-700", "border-rose-200", "bg-purple-50", "text-purple-700", "border-purple-200", "bg-emerald-50", "text-emerald-700");
-      if (isError) {
-        el.classList.add("bg-rose-50", "text-rose-700", "border", "border-rose-200");
-      } else {
-        el.classList.add("bg-purple-50", "text-purple-700", "border", "border-purple-200");
+    function showError(code, message) {
+      $("errorBox").classList.remove("hidden");
+      $("errorTitle").textContent = code ? `Error (${code})` : "Download Error";
+      
+      let msg = message || "An unexpected error occurred.";
+      if (code === "BOT_VERIFICATION") {
+        msg = "This video could not be downloaded because YouTube requires additional verification for the download server. Please try another public video or configure the server's authorized YouTube authentication.";
       }
-      el.innerHTML = text;
+      $("errorMessage").textContent = msg;
     }
 
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    function hideError() {
+      $("errorBox").classList.add("hidden");
     }
 
     // Auto preview metadata on typing / paste
@@ -361,17 +339,16 @@
       clearTimeout(debounceTimer);
       const url = e.target.value.trim();
       if (url.length > 15 && (url.includes("youtube.com") || url.includes("youtu.be"))) {
-        debounceTimer = setTimeout(() => fetchInfo(url), 400);
+        debounceTimer = setTimeout(() => fetchInfo(url), 350);
       }
     });
 
     async function fetchInfo(url) {
       try {
-        const cookies = getStoredCookies();
-        const res = await fetch("/api/info", {
+        const res = await fetch(buildUrl("/api/info"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url, cookies })
+          body: JSON.stringify({ url })
         });
         if (res.ok) {
           const data = await res.json();
@@ -386,54 +363,112 @@
       } catch {}
     }
 
+    // Poll job status
+    function pollJob(jobId, format) {
+      return new Promise((resolve, reject) => {
+        const interval = setInterval(async () => {
+          try {
+            const res = await fetch(buildUrl(`/api/download/${jobId}`));
+            if (!res.ok) {
+              clearInterval(interval);
+              const errData = await res.json().catch(() => ({}));
+              return reject(new Error(errData.message || "Failed to query job status"));
+            }
+
+            const data = await res.json();
+
+            // Update UI progress
+            if (data.progress !== undefined) {
+              const p = Math.round(data.progress);
+              $("progressBar").style.width = `${p}%`;
+              $("percentText").textContent = `${p}%`;
+            }
+
+            if (data.stage) {
+              $("stageText").textContent = data.stage.toUpperCase();
+              if (data.stage === "downloading") {
+                $("statusDetails").textContent = "Streaming media from YouTube...";
+              } else if (data.stage === "transcoding") {
+                $("statusDetails").textContent = "Processing and converting with FFmpeg...";
+              } else if (data.stage === "queued") {
+                $("statusDetails").textContent = "Queued in worker pool...";
+              }
+            }
+
+            if (data.status === "completed") {
+              clearInterval(interval);
+              resolve(data);
+            } else if (data.status === "failed") {
+              clearInterval(interval);
+              const err = new Error(data.message || "Media processing failed.");
+              err.code = data.code;
+              reject(err);
+            }
+          } catch (err) {
+            clearInterval(interval);
+            reject(err);
+          }
+        }, 1000);
+      });
+    }
+
     // Download form submit
     $("downloadForm").addEventListener("submit", async e => {
       e.preventDefault();
+      hideError();
       $("downloadResult").classList.add("hidden");
+      $("progressContainer").classList.remove("hidden");
       
       const btn = $("downloadBtn");
-      const status = $("downloadStatus");
       const url = $("url").value.trim();
       const format = $("format").value;
       const quality = $("quality").value;
-      const cookies = getStoredCookies();
+      const title = $("videoTitle").textContent || "";
 
       btn.disabled = true;
-      btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing stream...`;
-      showMsg(status, "Analyzing video and preparing high-speed download...");
+      btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Initializing Job...`;
+
+      $("progressBar").style.width = "5%";
+      $("percentText").textContent = "5%";
+      $("stageText").textContent = "STARTING";
+      $("statusDetails").textContent = "Creating download job on server...";
 
       try {
-        // Step 1: Info fetch
-        await fetchInfo(url);
-
-        // Step 2: Download
-        showMsg(status, `Extracting and transcoding ${format.toUpperCase()} (${quality}). Please wait...`);
-        
-        const r = await fetch("/api/download", {
+        // Step 1: Create Job
+        const res = await fetch(buildUrl("/api/download"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url, format, quality, cookies })
+          body: JSON.stringify({ url, format, quality, title })
         });
 
-        const data = await r.json();
-        if (!r.ok) throw new Error(data.error || "Failed to download media");
+        const data = await res.json();
+        if (!res.ok || !data.jobId) {
+          const err = new Error(data.message || "Failed to create download job.");
+          err.code = data.code;
+          throw err;
+        }
 
-        $("resultTitle").textContent = $("videoTitle").textContent || data.filename;
-        $("resultType").textContent = `Format: ${format.toUpperCase()} • Ready for download`;
-        $("downloadLink").href = data.downloadUrl;
-        $("downloadLink").download = data.filename;
+        // Step 2: Poll Job
+        const completedJob = await pollJob(data.jobId, format);
+
+        // Step 3: Success
+        $("progressBar").style.width = "100%";
+        $("percentText").textContent = "100%";
+        $("stageText").textContent = "COMPLETED";
+        $("statusDetails").textContent = "Media ready for high-speed download.";
+
+        $("resultTitle").textContent = title || completedJob.filename || "Your media file is ready";
+        $("resultType").textContent = `Format: ${format.toUpperCase()} • Size: ${completedJob.fileSize ? (completedJob.fileSize / (1024 * 1024)).toFixed(1) + ' MB' : 'Ready'}`;
+        $("downloadLink").href = buildUrl(completedJob.downloadUrl);
+        $("downloadLink").download = completedJob.filename || `media.${format}`;
         
         $("downloadResult").classList.remove("hidden");
-        showMsg(status, "🎉 Download prepared successfully!");
       } catch (err) {
-        let msg = escapeHtml(err.message);
-        if (msg.includes("bot verification") || msg.includes("Cookie")) {
-          msg += ` <br><button onclick="$('openSettingsBtn').click()" class="mt-2 inline-block bg-rose-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-rose-700">Open Cookie Settings</button>`;
-        }
-        showMsg(status, msg, true);
+        $("progressContainer").classList.add("hidden");
+        showError(err.code, err.message);
       } finally {
         btn.disabled = false;
-        btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg><span>Start Download</span>`;
+        btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg><span>Start Download Job</span>`;
       }
     });
 
@@ -441,28 +476,27 @@
     $("cutForm").addEventListener("submit", async e => {
       e.preventDefault();
       $("cutResult").classList.add("hidden");
+      $("cutProgress").classList.remove("hidden");
 
       const btn = $("cutBtn");
-      const status = $("cutStatus");
       btn.disabled = true;
-      btn.textContent = "Trimming Media...";
-      showMsg(status, "Uploading and trimming segment with FFmpeg...");
 
       try {
         const fd = new FormData(e.target);
-        const r = await fetch("/api/cut", { method: "POST", body: fd });
+        const r = await fetch(buildUrl("/api/cut"), { method: "POST", body: fd });
         const data = await r.json();
-        if (!r.ok) throw new Error(data.error || "Failed to cut media");
+        if (!r.ok || !data.success) {
+          throw new Error(data.message || "Failed to cut media");
+        }
 
-        $("cutLink").href = data.downloadUrl;
+        $("cutLink").href = buildUrl(data.downloadUrl);
         $("cutLink").download = data.filename;
         $("cutResult").classList.remove("hidden");
-        showMsg(status, "Trim completed successfully!");
       } catch (err) {
-        showMsg(status, escapeHtml(err.message), true);
+        alert("Media Cutter Error: " + err.message);
       } finally {
+        $("cutProgress").classList.add("hidden");
         btn.disabled = false;
-        btn.textContent = "Trim & Process Media";
       }
     });
   </script>
